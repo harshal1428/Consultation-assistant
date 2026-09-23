@@ -1,0 +1,29 @@
+# Environments
+.env
+.venv/
+env/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Node / React
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+frontend/dist/
+frontend/node_modules/
+
+# IDEs and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
