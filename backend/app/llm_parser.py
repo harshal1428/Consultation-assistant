@@ -38,6 +38,11 @@ increase, decrease, rotate, narrow, widen, raise, lower
 Supported units:
 mm, degrees
 
+RULES:
+1. Normalize all units (cm) strictly to millimeters (mm). Example: "0.2 cm" -> 2.0 mm.
+2. Map anatomical synonyms to canonical targets. Example: "bridge" or "dorsum" -> "nasal_bridge", "tip" -> "nasal_tip".
+3. For relative instructions like "slightly" or "a little", set value to null. Never guess precise numbers.
+
 The command schema output must be strict JSON matching this structure:
 {
   "target": string | null,
