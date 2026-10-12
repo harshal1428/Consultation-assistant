@@ -178,7 +178,6 @@ ${equipment.length === 0 ? "None logged." : equipment.map((e: any) => `- ${e.nam
           <div className="left-col">
             <div className="panel-header" style={{position: 'absolute', top: 10, left: 10, zIndex: 10}}>
               <h3 style={{textShadow: '0 2px 4px rgba(0,0,0,0.5)'}}>3D Simulation</h3>
-              <span className="prototype-label">Simulation Prototype</span>
             </div>
             
             <div className="view-controls" style={{position: 'absolute', top: 10, right: 10, zIndex: 10, display: 'flex', gap: '5px'}}>

@@ -32,15 +32,12 @@ def parse_command(request: CommandRequest):
         
     try:
         parsed = parse_clinical_command_llm(request.text)
-        # If the LLM successfully generated JSON but failed to extract intent, force a fallback
-        if parsed.target is None or parsed.operation is None:
-            raise ValueError("LLM returned null target or operation")
     except Exception as e:
         logger.warning(f"LLM parser failed or returned null intent: {e}. Falling back to deterministic parser.")
         parsed = parse_clinical_command(request.text)
-    
-    # Reject commands without enough context after BOTH parsers have tried
-    if parsed.target is None or parsed.operation is None:
+        
+    # If BOTH target and operation are missing, it's totally invalid
+    if parsed.target is None and parsed.operation is None:
         raise HTTPException(status_code=422, detail="Could not extract a valid clinical intent from the command")
         
     # Constrain extreme values for safety
