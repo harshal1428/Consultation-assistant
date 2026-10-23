@@ -1,95 +1,186 @@
 # VoiceSurg 3D: UI Integration & Component Map
 
-This document is designed for developers who want to redesign, replace, or build a entirely new UI on top of the existing VoiceSurg 3D system logic. It maps out where every interactive element currently lives, what state it controls, and the exact API interfaces required to integrate a new UI.
+Audience: developers who want to redesign, replace, or rebuild the UI on top of the existing
+VoiceSurg 3D system logic. This map shows where every interactive element lives, what state it
+controls, and the exact interfaces required to integrate a new UI.
+
+> Updated for **Phase 7** (17 parameters across five regions — nose, lips, chin, jawline, cheeks)
+> on top of the Phase 6 in-memory consultation session (transcript, proposal state machine,
+> event timeline, scenarios + compare, summary export) and the Phase 3 contract. See
+> `docs/PHASE_3_REPORT.md` … `docs/PHASE_7_REPORT.md`.
 
 ---
 
-## 1. Button Map & Data Flow
+## 1. Component Map & Data Flow
 
-### A. Global Footer Actions
-**1. Start Listening Button** (`🎤 Start Listening`)
-- **Location:** Sticky Footer (`.bottom-bar`)
-- **Triggered Function:** `handleStartListening()`
-- **Connections:** 
-  - Triggers `speechService.startListening()` from `src/services/speech.ts`.
-  - **State Changes:** Sets `isListening` to `true`, clears `transcript`, `speechError`, and `apiError`.
-  - **Callback Flow:** When speech ends, the audio is converted to text via browser Web Speech API -> text is passed to `parseCommandAPI(text)` -> returns `ParsedCommand` -> sets `pendingCommand` state.
+```
+App (orchestrator, owns all session state)
+├─ AppHeader            title · session label/status · backend status · New / End / Reset
+├─ SimulationWorkspace  ViewerToolbar + FaceViewer(s) + compare selectors + parameter diff
+│   └─ FaceViewer       @react-three/fiber canvas + FaceDeformationViewer  (props: modelState)
+├─ ChangeHistory        applied commands · per-item undo · save report · reset
+├─ SessionTimeline      newest-first session events
+├─ ScenarioPanel        save / rename / delete / load / select · compare feeding
+├─ ConsultationPanel    VoiceInput · TranscriptView · typed form · ChangeSetReview · TranscriptLog
+│   ├─ ChangeSetReview  list of InstructionCard + summary + Confirm / Apply-valid / Reject
+│   │   └─ InstructionCard  status chip · fields · reason · inline edit (incl. region) · clarify · remove
+│   └─ TranscriptLog    original utterances + outcome + separate interpretation
+├─ ParameterPanel       17 ParameterControls (Nose / Lips / Chin / Jawline / Cheeks) + per-parameter reset
+└─ ConfirmDialog        accessible modal for destructive actions
+```
 
-**2. Reset Simulation Button** (`Reset Simulation`)
-- **Location:** Sticky Footer (`.bottom-bar`)
-- **Triggered Function:** `handleReset()`
-- **Connections:**
-  - Calls `resetModel()` from `src/scene/transformations/logic.ts`.
-  - **State Changes:** Clears `history` array, sets `modelState` to `initialModelState`, clears all transcripts and errors.
+`App.tsx` is the single orchestrator. `SimulationWorkspace` owns viewer-only UI state
+(view mode, landmarks/wireframe/displacement toggles, A/B compare selection) and never mutates
+the model. The consultation *narrative* lives in `ConsultationSession`; the applied model still
+lives in `history` (see §2 Step 1).
 
-### B. Demo Mode Panel
-**3. Example Command Buttons** (e.g., `Reduce bridge by 2 mm`)
-- **Location:** Right Sidebar (`.demo-panel`)
-- **Triggered Function:** `handleExampleCommand(text)`
-- **Connections:** 
-  - Directly bypasses the microphone and submits hardcoded text strings to `parseCommandAPI(text)`.
-  - Identical data flow to the Microphone button after text is acquired.
+### Interactive elements
 
-### C. AI Interpretation Panel (Confirmation)
-**4. Apply Change Button**
-- **Location:** Right Sidebar (`.clinical-panel`) -> Appears only when `pendingCommand` exists.
-- **Triggered Function:** `handleApplyCommand()`
-- **Connections:**
-  - Pushes the `pendingCommand` into the `history` array.
-  - Passes the entire updated history array to `applyAllCommands(history)` in `logic.ts` to deterministically recalculate the 3D model properties.
-  - **State Changes:** Updates `modelState`, clears `pendingCommand`.
-- **Validation:** Disabled if `pendingCommand.value === null` (Missing numerical measurement).
+**1. Voice toggle** (`VoiceInput`, inside `ConsultationPanel`)
+- Calls `handleToggleListening()` in `App.tsx` (refused once the session is ended).
+- Starts/stops `speechService.startListening({ lang, onTranscript, onError, onEnd })`.
+- On a final transcript → `parseText(text, "voice")`.
 
-**5. Cancel Button**
-- **Location:** Right Sidebar (`.clinical-panel`) next to Apply.
-- **Triggered Function:** `handleCancelCommand()`
-- **Connections:** Simply clears the `pendingCommand` state, dismissing the confirmation panel.
+**2. Typed command form** (`ConsultationPanel`)
+- `onSubmitText(text)` → `parseText(text, "typed")` (identical downstream path to voice).
 
-### D. Command History
-**6. Undo Button (Per Item)**
-- **Location:** Right Sidebar (`.history-panel`) -> Rendered iteratively for each item in the `history` array.
-- **Triggered Function:** `handleUndo(index)`
-- **Connections:**
-  - Splices the specific command out of the `history` array.
-  - Re-runs `applyAllCommands(newHistory)` on the remaining array to rebuild the 3D model state from scratch.
+**3. Change-set review** (`ChangeSetReview` + `InstructionCard`) — driven by the **active
+proposal's** instructions.
+- Per instruction: status chip, region/parameter/action/proposed change, parser confidence,
+  reason, inline **Edit** (region, parameter, operation, value, unit), **Remove**, and
+  clarification choices.
+- **Confirm & simulate (N)** → `handleConfirm("all")`: enabled only when *every* instruction is
+  applicable; applies them to `history` and resolves the proposal as `confirmed`.
+- **Apply only valid (N)** → `handleConfirm("valid")`: applies the valid subset (a deliberate
+  choice when the set is mixed).
+- **Reject all** → `handleRejectAll()`: resolves the proposal as `rejected`; nothing applied.
+
+**4. Session controls** (`AppHeader`)
+- `handleNewConsultation()` (confirmed when unsaved work exists), `handleEndConsultation()`,
+  `handleResetSimulation()` (confirmed when changes exist).
+
+**5. Undo** (`ChangeHistory`, one per item) → `handleUndo(index)`: removes that entry, recomputes
+the model, and logs an `undo` event.
+
+**6. Save report / Reset** (`ChangeHistory`) → Markdown consultation summary via
+`buildConsultationReport` / clears the applied state.
+
+**7. Parameter sliders** (`ParameterControl`, inside `ParameterPanel`)
+- `handleManualChange(key, value)` stores an **absolute** value as a single replaceable
+  `source: "manual"` command per parameter, and logs a (coalesced) `manual_edit` event.
+- All 17 keys (five regions) flow through the same `onChange(key, value)` handler; the panel only
+  changes which keys it surfaces (from `PARAM_GROUPS` / `descriptorsForGroup`).
+
+**8. Scenarios & compare**
+- `ScenarioPanel`: `createScenario` / `renameScenario` / `deleteScenario` / load
+  (`stateToCommands`) / select; `SimulationWorkspace` compares any two resolvable states.
 
 ---
 
 ## 2. Integration Guide: Building a New UI
 
-If you want to completely trash the current HTML/CSS and build a new user interface (e.g., using Tailwind, Material-UI, or a completely different layout), you do **not** need to touch the backend or the core 3D math. 
+You do **not** need to touch the backend, the 3D math, or the session model internals — reuse the
+pure logic and re-render as you wish.
 
-Here is exactly what you need to preserve/connect to make your new UI plug-and-play:
+### Step 1: Core state (React `useState` in your root component)
 
-### Step 1: Preserve the Core State (React `useState`)
-Your new root component (e.g., `App.tsx`) must maintain these 5 core states to function:
+The applied model is never stored directly — it is **derived** from the applied history. The
+consultation narrative is a separate, fully in-memory session object:
+
 ```typescript
-const [modelState, setModelState] = useState<ModelState>(initialModelState);
-const [history, setHistory] = useState<Command[]>([]);
+import { useMemo, useState } from "react";
+import { applyAllCommands } from "./scene/transformations/logic";
+import type { Command } from "./scene/transformations/types";
+import { createSession } from "./scene/session";
+import type { ConsultationSession } from "./scene/session";
+
+const [history, setHistory] = useState<Command[]>([]);            // applied state (source of truth)
+const [session, setSession] = useState<ConsultationSession>(() => createSession()); // narrative
+const [activeProposalId, setActiveProposalId] = useState<string | null>(null);
+const [editingIndex, setEditingIndex] = useState<number | null>(null);
 const [isListening, setIsListening] = useState(false);
-const [transcript, setTranscript] = useState("");
-const [pendingCommand, setPendingCommand] = useState<Command | null>(null);
+const [isProcessing, setIsProcessing] = useState(false);
+
+const modelState = useMemo(() => applyAllCommands(history), [history]);
+const activeProposal = session.proposals.find((p) => p.id === activeProposalId) ?? null;
+const pendingCommands = activeProposal?.instructions ?? [];
 ```
 
-### Step 2: Use the Isolated Services
-Do not write your own fetch calls or microphone logic. Simply import the existing services:
-- **API Call:** `import { parseCommandAPI } from './services/api';`
-  - *Usage:* `const jsonResult = await parseCommandAPI("text string");`
-- **Speech Capture:** `import { speechService } from './services/speech';`
-  - *Usage:* `speechService.startListening({ onTranscript: (text) => { ... } })`
+`session.ts` is entirely pure: `buildTranscriptEntry`, `buildProposal`, `appendProposal`,
+`updateProposal`, `refreshProposalStatus`, `resolveProposal`, `appendEvent`, `createScenario`,
+`endSession`, `stateToCommands`, `paramDiff`, `buildConsultationReport`, …
 
-### Step 3: Use the Transformation Logic
-Do not attempt to manually mutate the 3D model. Use the deterministic functions inside `src/scene/transformations/logic.ts`:
-- **Applying State:** Pass your array of commands to `applyAllCommands(historyArray)`. It will return the new mathematical limits for the nose.
-- **Updating Viewport:** Pass the resulting state to the `<Viewport modelState={modelState} />` component. The 3D geometry engine inside the Viewport will automatically morph based on those props.
+> Async safety: capture the session id (and a request token) before `await`; drop the result if
+> the session changed or ended. Guard against double-applying a change set.
 
-### Architecture Summary for UI Developers:
-The system is built on **Unidirectional Data Flow**:
-1. Your New UI captures Text (Voice or typing).
-2. You pass text to `parseCommandAPI()`.
-3. You present the returned `ParsedCommand` JSON to the user in whatever visual way you want.
-4. When the user confirms, you push it to an array.
-5. You pass that array to `applyAllCommands()`.
-6. You pass the output to the `<Viewport>`.
+### Step 2: Isolated services
 
-By following this exact unidirectional pipeline, your custom UI will seamlessly integrate with the highly robust Python backend and Three.js engine.
+- **API:** `import { parseCommandAPI, checkBackendHealth } from "./services/api";`
+  - `const { instructions, text } = await parseCommandAPI(text, context);`
+  - `context` is an array of `ContextItem` (the last few applied instructions) used only to
+    resolve references such as "it"/"that". Send at most the last 4.
+- **Speech:** `import { speechService } from "./services/speech";`
+  - `speechService.startListening({ onTranscript: (t) => { ... } })`; `speechService.isSupported`.
+
+### Step 3: Transformation logic (never mutate the model by hand)
+
+From `src/scene/transformations/logic.ts`:
+- `applyAllCommands(commands)` → `ModelState` derived from the whole history.
+- `applyCommand(state, command)` → next `ModelState` for a single command.
+- `createManualCommand(key, value)` → an absolute-value manual command.
+- `isManualFor(cmd, key)`, `signedMagnitude(cmd)`, `resetModel()`.
+
+Parameter registry (`src/lib/params.ts`): `PARAM_DESCRIPTORS`, `PARAM_GROUPS`, `descriptorFor`,
+`paramKeyFor`, `REGION_OPTIONS`, `parametersForRegion`.
+
+### Step 4: Render the 3D view
+
+Pass the derived state straight to the viewer:
+
+```tsx
+<FaceViewer modelState={modelState} />
+```
+
+The deformation engine (`FaceDeformationViewer.tsx`) morphs automatically from props.
+
+### Architecture summary (unidirectional)
+
+1. UI captures text (voice or typed) → `parseText`.
+2. `parseCommandAPI(text, context)` → `ParseResponse { instructions, text }`.
+3. Record a transcript entry and a proposal; present the `Command[]` to the user.
+4. On confirm, push only `status === "ok"` instructions into `history` and resolve the proposal.
+5. `applyAllCommands(history)` computes the model state.
+6. Pass it to `<FaceViewer modelState={...} />`.
+
+---
+
+## 3. The `Command` object
+
+`Command extends Instruction` and adds UI/session fields:
+
+```typescript
+interface Command extends Instruction {
+  id: string;
+  source: "voice" | "manual";
+  createdAt: number;
+}
+```
+
+`Instruction` fields: `target, parameter, operation, value, requested_value, requested_unit,
+unit, direction, adjusted_value, confidence, requires_confirmation, status, reason,
+original_text, parser`. Statuses: `ok | needs_clarification | unsupported | invalid | no_change`.
+
+**Only `status === "ok"` instructions may be applied.** `api.ts` validates the response shape;
+`logic.ts` refuses to apply anything that is not `ok`. In the UI, a change set is applied in full
+or via the explicit "Apply only valid" action — never silently partially.
+
+---
+
+## 4. What must stay intact
+
+- `src/components/FaceDeformationViewer.tsx` — the 3D engine (do not modify).
+- The backend contract in `backend/app/schemas.py` — the single representation that may cross
+  the API boundary.
+- Deterministic derivation (`modelState = applyAllCommands(history)`) — undo/replace stay exact
+  without tracking inverse deltas.
+- The session model is **in-memory only** — no database, auth, or EMR may be implied.

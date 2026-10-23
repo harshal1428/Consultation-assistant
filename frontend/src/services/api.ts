@@ -1,22 +1,75 @@
-import type { ParsedCommand } from '../scene/transformations/types';
+import type { ContextItem, ParseResponse } from "../scene/transformations/types";
 
-export const parseCommandAPI = async (text: string): Promise<ParsedCommand> => {
+const API_BASE = "http://127.0.0.1:8000";
+
+function isParseResponse(value: unknown): value is ParseResponse {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    Array.isArray((value as ParseResponse).instructions)
+  );
+}
+
+/**
+ * Send text (spoken or typed) through the single backend parsing pathway.
+ * `context` carries at most the last few applied instructions for follow-up
+ * resolution; it is bounded here as well as on the server.
+ */
+export const parseCommandAPI = async (
+  text: string,
+  context: ContextItem[] = [],
+): Promise<ParseResponse> => {
+  // Backstop for a network-level stall: the backend already bounds the model
+  // call, but the UI must never wait forever for a reply.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  let response: Response;
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/parse-command', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ text })
+    response = await fetch(`${API_BASE}/api/parse-command`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, context: context.slice(-4) }),
+      signal: controller.signal,
     });
-    
-    if (!response.ok) {
+  } catch {
+    throw new Error(
+      controller.signal.aborted
+        ? "The parsing service took too long to respond. Please try again."
+        : "Could not reach the parsing service. Check that the backend is running on port 8000.",
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  if (!response.ok) {
+    let detail = `Parsing failed (HTTP ${response.status}).`;
+    try {
       const errorData = await response.json();
-      throw new Error(errorData.detail || 'Failed to parse command');
+      if (errorData?.detail) detail = errorData.detail;
+    } catch {
+      /* response body was not JSON */
     }
-    
-    return await response.json();
-  } catch (err: any) {
-    throw new Error(err.message || 'Backend is unavailable. Could not parse command.');
+    throw new Error(detail);
+  }
+
+  const data: unknown = await response.json();
+  if (!isParseResponse(data)) {
+    throw new Error("Parsing service returned an unexpected response shape.");
+  }
+  return data;
+};
+
+/** Lightweight reachability probe for the header status indicator. */
+export const checkBackendHealth = async (): Promise<boolean> => {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const response = await fetch(`${API_BASE}/api/health`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    return response.ok;
+  } catch {
+    return false;
   }
 };
