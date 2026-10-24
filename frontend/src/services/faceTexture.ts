@@ -201,21 +201,22 @@ function sampleBilinear(
  */
 export function buildFaceTextureData(input: FaceTextureInput): FaceTextureData {
   const width = Math.max(2, Math.round(input.width ?? 1024));
-  const height = Math.max(2, Math.round(input.height ?? 512));
-  const { segmentsX, segmentsY } = input;
+  const height = Math.max(2, Math.round(input.height ?? 1024));
   const vertexCount = Math.min(
     Math.floor(input.positions.length / 3),
     Math.floor(input.correspondence.length / 3),
-    (segmentsX + 1) * (segmentsY + 1),
   );
 
   const total = width * height;
   const out = new Uint8ClampedArray(total * 4);
   const hasSample = new Uint8Array(total);
+  const texelSampled = new Uint8Array(total);
   const viewContributions: Partial<Record<PhotoView, number>> = {};
 
   const minCoverage = input.minCoverage ?? 0.05;
   const minWeight = input.minWeight ?? 0.08;
+  const hairlineY = input.hairlineY ?? 0.4;
+  const backZ = input.backZ ?? -0.05;
 
   // Pre-compute the normal in the aligned frame for every head vertex.
   const alignedNormals = new Float32Array(vertexCount * 3);
@@ -231,6 +232,11 @@ export function buildFaceTextureData(input: FaceTextureInput): FaceTextureData {
     alignedNormals[v * 3 + 2] = nz;
   }
 
+  // Per-vertex photo colour sampled from the fitted cameras.
+  const vertexSampled = new Uint8Array(vertexCount);
+  const vertexColour = new Float32Array(vertexCount * 3);
+  const colour: [number, number, number] = [0, 0, 0];
+
   let skinSumR = 0;
   let skinSumG = 0;
   let skinSumB = 0;
@@ -240,87 +246,71 @@ export function buildFaceTextureData(input: FaceTextureInput): FaceTextureData {
   let hairSumB = 0;
   let hairCount = 0;
 
-  const colour: [number, number, number] = [0, 0, 0];
-  const hairlineY = input.hairlineY ?? 0.44;
+  for (let v = 0; v < vertexCount; v += 1) {
+    const coverage = input.coverage[v];
+    if (coverage < minCoverage) continue;
 
-  for (let ty = 0; ty < height; ty += 1) {
-    for (let tx = 0; tx < width; tx += 1) {
-      const texel = ty * width + tx;
-      const vertex = vertexIndexForTexel(tx, ty, width, height, segmentsX, segmentsY);
-      if (vertex >= vertexCount) continue;
+    const nx = alignedNormals[v * 3];
+    const ny = alignedNormals[v * 3 + 1];
+    const nz = alignedNormals[v * 3 + 2];
 
-      const coverage = input.coverage[vertex];
-      if (coverage < minCoverage) continue;
+    const cx = input.correspondence[v * 3];
+    const cy = input.correspondence[v * 3 + 1];
+    const cz = input.correspondence[v * 3 + 2];
+    if (!Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(cz)) continue;
 
-      const nx = alignedNormals[vertex * 3];
-      const ny = alignedNormals[vertex * 3 + 1];
-      const nz = alignedNormals[vertex * 3 + 2];
+    let weightSum = 0;
+    let r = 0;
+    let g = 0;
+    let b = 0;
 
-      const cx = input.correspondence[vertex * 3];
-      const cy = input.correspondence[vertex * 3 + 1];
-      const cz = input.correspondence[vertex * 3 + 2];
-      if (!Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(cz)) continue;
+    for (const view of input.views) {
+      const facing = nx * view.direction[0] + ny * view.direction[1] + nz * view.direction[2];
+      if (facing <= 0) continue;
+      const weight = view.priority * Math.pow(facing, 1.5);
+      if (weight < minWeight) continue;
 
-      let weightSum = 0;
-      let r = 0;
-      let g = 0;
-      let b = 0;
+      const [sx, sy, sz] = applySimilarityPoint(
+        input.inverseAlignment,
+        cx,
+        cy,
+        cz,
+      );
+      const p = applySimilarityPoint(view.transform, sx, sy, sz);
+      const u = p[0] / view.width;
+      const v = -p[1] / view.height;
+      if (!sampleBilinear(view, u, v, colour)) continue;
 
-      for (const view of input.views) {
-        const facing = nx * view.direction[0] + ny * view.direction[1] + nz * view.direction[2];
-        if (facing <= 0) continue;
-        const weight = view.priority * Math.pow(facing, 1.5);
-        if (weight < minWeight) continue;
+      r += colour[0] * weight;
+      g += colour[1] * weight;
+      b += colour[2] * weight;
+      weightSum += weight;
+      viewContributions[view.view] = (viewContributions[view.view] ?? 0) + 1;
+    }
 
-        // aligned template frame -> fitted shape frame -> image pixels.
-        const [sx, sy, sz] = applySimilarityPoint(
-          input.inverseAlignment,
-          cx,
-          cy,
-          cz,
-        );
-        const [px, py] = (() => {
-          const p = applySimilarityPoint(view.transform, sx, sy, sz);
-          return [p[0], p[1]] as const;
-        })();
+    if (weightSum <= 0) continue;
 
-        const u = px / view.width;
-        const v = -py / view.height;
-        if (!sampleBilinear(view, u, v, colour)) continue;
+    const inv = 1 / weightSum;
+    const sr = r * inv;
+    const sg = g * inv;
+    const sb = b * inv;
+    const vo = v * 3;
+    vertexSampled[v] = 1;
+    vertexColour[vo] = sr;
+    vertexColour[vo + 1] = sg;
+    vertexColour[vo + 2] = sb;
 
-        r += colour[0] * weight;
-        g += colour[1] * weight;
-        b += colour[2] * weight;
-        weightSum += weight;
-        viewContributions[view.view] = (viewContributions[view.view] ?? 0) + 1;
-      }
-
-      if (weightSum <= 0) continue;
-
-      const inv = 1 / weightSum;
-      const oi = texel * 4;
-      const sr = r * inv;
-      const sg = g * inv;
-      const sb = b * inv;
-      out[oi] = sr;
-      out[oi + 1] = sg;
-      out[oi + 2] = sb;
-      out[oi + 3] = 255;
-      hasSample[texel] = 1;
-
-      // Collect fallback statistics from the face and from the hair region.
-      const py = input.positions[vertex * 3 + 1];
-      if (py > hairlineY) {
-        hairSumR += sr;
-        hairSumG += sg;
-        hairSumB += sb;
-        hairCount += 1;
-      } else if (input.positions[vertex * 3 + 2] > 0.2) {
-        skinSumR += sr;
-        skinSumG += sg;
-        skinSumB += sb;
-        skinCount += 1;
-      }
+    const py = input.positions[vo + 1];
+    if (py > hairlineY) {
+      hairSumR += sr;
+      hairSumG += sg;
+      hairSumB += sb;
+      hairCount += 1;
+    } else if (input.positions[vo + 2] > 0.2) {
+      skinSumR += sr;
+      skinSumG += sg;
+      skinSumB += sb;
+      skinCount += 1;
     }
   }
 
@@ -335,29 +325,232 @@ export function buildFaceTextureData(input: FaceTextureInput): FaceTextureData {
     hairCount > 0 ? hairSumB / hairCount : skinColor[2] * 0.26,
   ];
 
-  // Second pass: paint the texels no photograph could see.
-  let texturedTexels = 0;
-  for (let ty = 0; ty < height; ty += 1) {
-    for (let tx = 0; tx < width; tx += 1) {
-      const texel = ty * width + tx;
-      const oi = texel * 4;
-      if (hasSample[texel]) {
-        texturedTexels += 1;
-        continue;
-      }
-
-      const vertex = vertexIndexForTexel(tx, ty, width, height, segmentsX, segmentsY);
-      let fallback = skinColor;
-      if (vertex < vertexCount) {
-        const y = input.positions[vertex * 3 + 1];
-        const z = input.positions[vertex * 3 + 2];
-        if (y > hairlineY || (z < -0.05 && y > -0.02)) fallback = hairColor;
-      }
-      out[oi] = fallback[0];
-      out[oi + 1] = fallback[1];
-      out[oi + 2] = fallback[2];
-      out[oi + 3] = 255;
+  // Pre-compute per-vertex base colours (photo where available, else hair/skin).
+  const baseR = new Float32Array(vertexCount);
+  const baseG = new Float32Array(vertexCount);
+  const baseB = new Float32Array(vertexCount);
+  for (let v = 0; v < vertexCount; v += 1) {
+    const vo = v * 3;
+    if (vertexSampled[v]) {
+      baseR[v] = vertexColour[vo];
+      baseG[v] = vertexColour[vo + 1];
+      baseB[v] = vertexColour[vo + 2];
+    } else {
+      const fc = fallbackColour(
+        input.positions[vo],
+        input.positions[vo + 1],
+        input.positions[vo + 2],
+        hairlineY,
+        backZ,
+        skinColor,
+        hairColor,
+      );
+      baseR[v] = fc[0];
+      baseG[v] = fc[1];
+      baseB[v] = fc[2];
     }
+  }
+
+  function edgeFunction(
+    ax: number, ay: number,
+    bx: number, by: number,
+    cx: number, cy: number,
+  ): number {
+    return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+  }
+
+  function fallbackColour(
+    _x: number, y: number, z: number,
+    hairlineY: number, backZ: number,
+    skinColor: [number, number, number],
+    hairColor: [number, number, number],
+  ): [number, number, number] {
+    if (y > hairlineY || (z < backZ && y > -0.02)) return hairColor;
+    return skinColor;
+  }
+
+  // Rasterise the UV mesh.
+  if (input.uvs && input.indices) {
+    const uvs = input.uvs;
+    const indices = input.indices;
+    const triangleCount = Math.floor(indices.length / 3);
+    for (let t = 0; t < triangleCount; t += 1) {
+      const a = indices[t * 3];
+      const b = indices[t * 3 + 1];
+      const c = indices[t * 3 + 2];
+      const ua = uvs[a * 2];
+      const va = uvs[a * 2 + 1];
+      const ub = uvs[b * 2];
+      const vb = uvs[b * 2 + 1];
+      const uc = uvs[c * 2];
+      const vc = uvs[c * 2 + 1];
+
+      const ax = ua * width;
+      const ay = (1 - va) * height;
+      const bx = ub * width;
+      const by = (1 - vb) * height;
+      const cx = uc * width;
+      const cy = (1 - vc) * height;
+
+      const minX = Math.max(0, Math.floor(Math.min(ax, bx, cx)));
+      const maxX = Math.min(width - 1, Math.ceil(Math.max(ax, bx, cx)));
+      const minY = Math.max(0, Math.floor(Math.min(ay, by, cy)));
+      const maxY = Math.min(height - 1, Math.ceil(Math.max(ay, by, cy)));
+
+      const area = edgeFunction(ax, ay, bx, by, cx, cy);
+      if (Math.abs(area) < 1e-9) continue;
+
+      for (let ty = minY; ty <= maxY; ty += 1) {
+        for (let tx = minX; tx <= maxX; tx += 1) {
+          const px = tx + 0.5;
+          const py = ty + 0.5;
+          const w0 = edgeFunction(bx, by, cx, cy, px, py);
+          const w1 = edgeFunction(cx, cy, ax, ay, px, py);
+          const w2 = edgeFunction(ax, ay, bx, by, px, py);
+          const sign = area >= 0 ? 1 : -1;
+          if (w0 * sign < 0 || w1 * sign < 0 || w2 * sign < 0) continue;
+          const invArea = 1 / area;
+          const bw0 = w0 * invArea;
+          const bw1 = w1 * invArea;
+          const bw2 = w2 * invArea;
+
+          const r = baseR[a] * bw0 + baseR[b] * bw1 + baseR[c] * bw2;
+          const g = baseG[a] * bw0 + baseG[b] * bw1 + baseG[c] * bw2;
+          const bcol = baseB[a] * bw0 + baseB[b] * bw1 + baseB[c] * bw2;
+          const texel = ty * width + tx;
+          const oi = texel * 4;
+          out[oi] = Math.max(0, Math.min(255, r));
+          out[oi + 1] = Math.max(0, Math.min(255, g));
+          out[oi + 2] = Math.max(0, Math.min(255, bcol));
+          out[oi + 3] = 255;
+          hasSample[texel] = 1;
+          const sampled = vertexSampled[a] * bw0 + vertexSampled[b] * bw1 + vertexSampled[c] * bw2;
+          if (sampled > 0.25) {
+            texelSampled[texel] = 1;
+          }
+        }
+      }
+    }
+  } else {
+    // Legacy SphereGeometry layout fallback.
+    const segmentsX = input.segmentsX ?? 192;
+    const segmentsY = input.segmentsY ?? 128;
+    const legacyVertexCount = Math.min(
+      vertexCount,
+      (segmentsX + 1) * (segmentsY + 1),
+    );
+    for (let ty = 0; ty < height; ty += 1) {
+      for (let tx = 0; tx < width; tx += 1) {
+        const texel = ty * width + tx;
+        const vertex = vertexIndexForTexel(tx, ty, width, height, segmentsX, segmentsY);
+        if (vertex >= legacyVertexCount) continue;
+        const coverage = input.coverage[vertex];
+        if (coverage < minCoverage) continue;
+        const vo = vertex * 3;
+        const nx = alignedNormals[vo];
+        const ny = alignedNormals[vo + 1];
+        const nz = alignedNormals[vo + 2];
+        const cx = input.correspondence[vo];
+        const cy = input.correspondence[vo + 1];
+        const cz = input.correspondence[vo + 2];
+        if (!Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(cz)) continue;
+
+        let weightSum = 0;
+        let r = 0;
+        let g = 0;
+        let b = 0;
+        for (const view of input.views) {
+          const facing = nx * view.direction[0] + ny * view.direction[1] + nz * view.direction[2];
+          if (facing <= 0) continue;
+          const weight = view.priority * Math.pow(facing, 1.5);
+          if (weight < minWeight) continue;
+          const [sx, sy, sz] = applySimilarityPoint(input.inverseAlignment, cx, cy, cz);
+          const p = applySimilarityPoint(view.transform, sx, sy, sz);
+          const u = p[0] / view.width;
+          const v = -p[1] / view.height;
+          if (!sampleBilinear(view, u, v, colour)) continue;
+          r += colour[0] * weight;
+          g += colour[1] * weight;
+          b += colour[2] * weight;
+          weightSum += weight;
+          viewContributions[view.view] = (viewContributions[view.view] ?? 0) + 1;
+        }
+        if (weightSum <= 0) continue;
+        const inv = 1 / weightSum;
+        const oi = texel * 4;
+        out[oi] = r * inv;
+        out[oi + 1] = g * inv;
+        out[oi + 2] = b * inv;
+        out[oi + 3] = 255;
+        hasSample[texel] = 1;
+        texelSampled[texel] = 1;
+      }
+    }
+    // Fill gaps with fallback.
+    for (let ty = 0; ty < height; ty += 1) {
+      for (let tx = 0; tx < width; tx += 1) {
+        const texel = ty * width + tx;
+        const oi = texel * 4;
+        if (hasSample[texel]) continue;
+        const vertex = vertexIndexForTexel(tx, ty, width, height, segmentsX, segmentsY);
+        let fallback = skinColor;
+        if (vertex < vertexCount) {
+          const vo = vertex * 3;
+          fallback = fallbackColour(
+            input.positions[vo],
+            input.positions[vo + 1],
+            input.positions[vo + 2],
+            hairlineY,
+            backZ,
+            skinColor,
+            hairColor,
+          );
+        }
+        out[oi] = fallback[0];
+        out[oi + 1] = fallback[1];
+        out[oi + 2] = fallback[2];
+        out[oi + 3] = 255;
+      }
+    }
+  }
+
+  // Dilate the photo-sampled texels a couple of pixels into the islands to
+  // avoid a thin skin fringe along UV edges when mipmapping.
+  for (let pass = 0; pass < 2; pass += 1) {
+    const copy = new Uint8ClampedArray(out);
+    for (let ty = 1; ty < height - 1; ty += 1) {
+      for (let tx = 1; tx < width - 1; tx += 1) {
+        const texel = ty * width + tx;
+        if (texelSampled[texel]) continue;
+        if (hasSample[texel]) continue;
+        // Check neighbours for a sampled texel.
+        for (let dy = -1; dy <= 1; dy += 1) {
+          for (let dx = -1; dx <= 1; dx += 1) {
+            if (dx === 0 && dy === 0) continue;
+            const n = (ty + dy) * width + (tx + dx);
+            if (texelSampled[n]) {
+              const oi = texel * 4;
+              const ni = n * 4;
+              out[oi] = copy[ni];
+              out[oi + 1] = copy[ni + 1];
+              out[oi + 2] = copy[ni + 2];
+              out[oi + 3] = 255;
+              hasSample[texel] = 1;
+              dy = 2;
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Fill the remaining untextured texels (outside islands / hair/scalp) with
+  // the fallback colours based on their nearest-triangle UVs. Since we've
+  // rasterised every triangle, this should be rare; fall back to position-based.
+  let texturedTexels = 0;
+  for (let i = 0; i < total; i += 1) {
+    if (texelSampled[i] || hasSample[i]) texturedTexels += 1;
   }
 
   return {

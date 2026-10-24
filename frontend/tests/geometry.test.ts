@@ -31,7 +31,7 @@ import { applyAllCommands, resetModel } from "../src/scene/transformations/logic
 import type { Command, ModelState } from "../src/scene/transformations/types";
 import { SIMULATED_PARAM_KEYS } from "../src/scene/transformations/types";
 
-const GEO = createHeadGeometry();
+const GEO = createHeadGeometry(undefined, undefined, undefined, undefined, "sculpted");
 const POSITION = GEO.getAttribute("position") as {
   count: number;
   array: ArrayLike<number>;

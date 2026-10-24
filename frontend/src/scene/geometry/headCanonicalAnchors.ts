@@ -1,13 +1,5 @@
-import { surfacePoint } from "./headShape";
-import type { CanonicalFaceModel } from "../../services/canonicalFaceModel";
-import {
-  fitSimilarity,
-  type SimilarityTransform,
-} from "../../services/multiViewFitting";
 import { HEAD_ASSET_ANCHORS } from "./headAssetData.generated";
 import type { CanonicalSceneAnchor } from "./personalizedHead";
-
-type AnchorPosition = { x: number; y: number; z: number };
 
 function sceneAnchor(id: keyof typeof HEAD_ASSET_ANCHORS, mediaPipeIndex: number, weight: number): CanonicalSceneAnchor & { position: [number, number, number] } {
   const a = HEAD_ASSET_ANCHORS[id];

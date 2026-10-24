@@ -40,8 +40,8 @@ function decodeBase64(payload: string): Uint8Array {
     for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
     return bytes;
   }
-  const buffer = (globalThis as { Buffer?: typeof Buffer }).Buffer;
-  if (buffer) return new Uint8Array(buffer.from(payload, "base64"));
+  const Buf = (globalThis as { Buffer?: typeof import("buffer").Buffer }).Buffer;
+  if (Buf) return new Uint8Array(Buf.from(payload, "base64"));
   throw new Error("No base64 decoder is available in this environment.");
 }
 

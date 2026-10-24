@@ -19,7 +19,7 @@ import {
   type FaceTextureData,
   type TextureView,
 } from "./faceTexture";
-import { createHeadGeometry, HEAD_MESH_SEGMENTS } from "../scene/geometry/headMesh";
+import { createHeadGeometry } from "../scene/geometry/headMesh";
 import { invertSimilarity, type PersonalizedHeadModel } from "../scene/geometry/personalizedHead";
 
 /** Longest edge of the working copy of a photograph. */
@@ -159,8 +159,6 @@ export async function buildPatientSkinTexture(
   options: BuildPatientSkinTextureOptions,
 ): Promise<PatientSkinTexture> {
   const { photos, fit, model } = options;
-  const segmentsX = HEAD_MESH_SEGMENTS.x;
-  const segmentsY = HEAD_MESH_SEGMENTS.y;
 
   const views: TextureView[] = [];
   let frontView: TextureView | undefined;
@@ -206,27 +204,34 @@ export async function buildPatientSkinTexture(
     throw new Error("No usable photograph was available to texture the reconstructed face.");
   }
 
-  // Geometry of the very same displaced mesh the simulation renders.
-  const geometry = createHeadGeometry(segmentsX, segmentsY, undefined, model);
+  // Geometry of the very same displaced mesh the simulation renders (realistic model).
+  const geometry = createHeadGeometry(undefined, undefined, undefined, model, "model");
   const position = geometry.getAttribute("position");
   const normal = geometry.getAttribute("normal");
+  const uv = geometry.getAttribute("uv");
+  const index = geometry.getIndex();
+  if (!index) throw new Error("Head geometry has no index buffer");
   const positions = new Float32Array(position.array as ArrayLike<number>);
   const normals = new Float32Array(normal.array as ArrayLike<number>);
+  const uvs = new Float32Array(uv.array as ArrayLike<number>);
+  const indices = new Uint16Array(index.array as ArrayLike<number>);
   geometry.dispose();
 
   const data = buildFaceTextureData({
     width: options.width,
     height: options.height,
-    segmentsX,
-    segmentsY,
     positions,
     normals,
+    uvs,
+    indices,
     correspondence: model.correspondence,
     coverage: model.coverage,
     canonicalToSceneRotation: model.alignment.rotation,
     inverseAlignment: invertSimilarity(fit.alignment),
     views,
     hairColor: sampleHairColor(frontView, frontPhoto),
+    hairlineY: 0.4,
+    backZ: -0.05,
   });
 
   const canvas = document.createElement("canvas");

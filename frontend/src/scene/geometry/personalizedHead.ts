@@ -35,7 +35,6 @@ import {
   fitSimilarity,
   type SimilarityTransform,
 } from "../../services/multiViewFitting";
-import { HEAD_CANONICAL_ANCHORS } from "./headCanonicalAnchors";
 
 /**
  * Anatomical pairs that exist in both the canonical face model (by MediaPipe

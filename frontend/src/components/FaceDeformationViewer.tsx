@@ -47,10 +47,8 @@ const SIDES = [-1, 1] as const;
  * no detachable ears, so those are omitted.
  */
 function ModelFeatures({
-  skinColor,
   showBrows = true,
 }: {
-  skinColor: string;
   showBrows?: boolean;
 }) {
   const eyeRadius = HEAD_ASSET_EYE.radius;
@@ -241,7 +239,7 @@ export function FaceDeformationViewer({
         />
       </mesh>
 
-      <ModelFeatures skinColor={skinColor} showBrows={!hasSkinTexture} />
+      <ModelFeatures showBrows={!hasSkinTexture} />
 
       {showWireframe && (
         <mesh geometry={model.geometry} scale={1.001}>

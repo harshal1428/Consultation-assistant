@@ -57,7 +57,7 @@ function createModelHeadGeometry(
   // The baseline must never be mutated by the renderer or by the deformation
   // pass; copy the positions out of the shared asset buffer.
   const base = new Float32Array(asset.positions);
-  let positionArray = base;
+  let positionArray: Float32Array = base;
 
   // The legacy morph operates in the sculpted head's coordinate frame; the
   // realistic model is not addressed by it. If one is passed (and there is no
@@ -82,19 +82,14 @@ function createModelHeadGeometry(
     positionArray = applyPersonalizedDisplacement(base, personalized);
   }
 
-  geometry.setAttribute(
-    "position",
-    new THREE.BufferAttribute(new Float32Array(positionArray), 3),
-  );
-  geometry.setAttribute(
-    "uv",
-    new THREE.BufferAttribute(new Float32Array(asset.uvs), 2),
-  );
-  geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(asset.indices), 1));
-  const normals = computeSmoothNormals(
-    geometry.getAttribute("position").array as Float32Array,
-    asset.indices,
-  );
+  const posArray = positionArray instanceof Float32Array ? new Float32Array(positionArray) : new Float32Array(positionArray);
+  const uvArray = new Float32Array(asset.uvs);
+  const idxArray = new Uint16Array(asset.indices);
+
+  geometry.setAttribute("position", new THREE.BufferAttribute(posArray, 3));
+  geometry.setAttribute("uv", new THREE.BufferAttribute(uvArray, 2));
+  geometry.setIndex(new THREE.BufferAttribute(idxArray, 1));
+  const normals = computeSmoothNormals(posArray, idxArray);
   geometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
