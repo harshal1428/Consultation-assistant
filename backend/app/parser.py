@@ -27,12 +27,12 @@ from .validation import build_instruction, canonical_unit_for
 
 #: Ordered (region, [patterns]) — first match wins.
 TARGET_SYNONYMS: List[Tuple[TargetRegion, List[str]]] = [
-    (TargetRegion.nasal_bridge, [r"nasal bridge", r"\bbridge\b", r"\bradix\b", r"\bnasion\b"]),
-    (TargetRegion.nasal_dorsum, [r"nasal dorsum", r"\bdorsum\b", r"\bdorsal\b"]),
-    (TargetRegion.nasal_tip, [r"nasal tip", r"\btip\b", r"\bpronasale\b", r"\bsupratip\b"]),
+    (TargetRegion.nasal_bridge, [r"nasal bridge", r"\bbridge\b", r"\bradix\b", r"\bnasion\b", r"\bdorsal hump", r"\bhump\b", r"\bdorsal prominence", r"\bdorsal convexity", r"\bbump\b"]),
+    (TargetRegion.nasal_dorsum, [r"nasal dorsum", r"\bdorsum\b", r"\bdorsal\b", r"\bnasal dorsum\b"]),
+    (TargetRegion.nasal_tip, [r"nasal tip", r"\btip\b", r"\bpronasale\b", r"\bsupratip\b", r"\bdroopy tip", r"\bbutton nose", r"\bscooped", r"\brefined tip", r"\btip definition"]),
     (
         TargetRegion.nostril_region,
-        [r"\bnostrils?\b", r"\bnares\b", r"\bnaris\b", r"\balar base\b", r"\balar\b", r"\bala\b", r"\balae\b"],
+        [r"\bnostrils?\b", r"\bnares\b", r"\bnaris\b", r"\balar base\b", r"\balar\b", r"\bala\b", r"\balae\b", r"\bnostril shape", r"\bnostril symmetry", r"\bnostril flare", r"\balar flare", r"\balar base width"],
     ),
     (
         TargetRegion.upper_lip,
@@ -42,9 +42,9 @@ TARGET_SYNONYMS: List[Tuple[TargetRegion, List[str]]] = [
         TargetRegion.lower_lip,
         [r"lower[\s-]*lips?", r"bottom lip", r"\blower\b[^.]*\blip\b"],
     ),
-    (TargetRegion.jawline, [r"\bjaw\s?line\b", r"\bmandible\b", r"\bmandibular\b", r"\bjaw\b"]),
+    (TargetRegion.jawline, [r"\bjaw\s?line\b", r"\bmandible\b", r"\bmandibular\b", r"\bjaw\b", r"\bleft.right asymmetry", r"\bleft right asymmetry", r"\basymmetry"]),
     (TargetRegion.chin, [r"\bchin\b", r"\bmenton\b", r"\bpogonion\b"]),
-    (TargetRegion.cheek, [r"\bcheeks?\b", r"\bmalar\b", r"\bzygomatic\b"]),
+    (TargetRegion.cheek, [r"\bcheeks?\b", r"\bmalar\b", r"\bzygomatic\b", r"\bnasolabial angle", r"\bcolumellar show", r"\bcolumellar.lobular angle", r"\bcolumellar lobular angle"]),
 ]
 
 #: Region words that are explicitly *not* supported in this phase.

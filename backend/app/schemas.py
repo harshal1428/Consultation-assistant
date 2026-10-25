@@ -24,6 +24,11 @@ class TargetRegion(str, Enum):
     chin = "chin"
     jawline = "jawline"
     cheek = "cheek"
+    nasal_base = "nasal_base"
+    columella = "columella"
+    septal_region = "septal_region"
+    left_side = "left_side"
+    right_side = "right_side"
 
 
 class Parameter(str, Enum):

@@ -22,7 +22,64 @@ class LlmError(RuntimeError):
     """Raised whenever the language-model path cannot produce usable output."""
 
 
-SYSTEM_INSTRUCTION = """
+SUPPORTED_TARGETS = """
+Supported targets (enums):
+nasal_bridge, nasal_dorsum, nasal_tip, nostril_region,
+upper_lip, lower_lip, chin, jawline, cheek,
+nasal_base, columella, septal_region, left_side, right_side
+"""
+
+SUPPORTED_PARAMS = """
+Supported parameters (enums):
+height, width, projection, rotation, fullness, definition
+"""
+
+SUPPORTED_OPS = """
+Supported operations (enums):
+increase, decrease, rotate, narrow, widen, raise, lower
+"""
+
+SUPPORTED_UNITS = """
+Supported units (enums):
+mm, cm, degrees
+"""
+
+ANATOMICAL_SYNONYMS = """
+Anatomical synonyms:
+- bridge/radix/dorsal hump/hump/dorsal prominence/dorsal convexity/bump -> nasal_bridge
+- dorsum/dorsal -> nasal_dorsum
+- tip/pronasale/supratip/droopy tip/button nose/scooped/refined tip/tip definition -> nasal_tip
+- nostril/nares/naris/alar base/alar/ala/alae/nostril shape/nostril symmetry/nostril flare/alar flare/alar base width -> nostril_region
+- upper lip/top lip -> upper_lip
+- lower lip/bottom lip -> lower_lip
+- jaw/jawline/mandible/mandibular/left-right asymmetry/asymmetry -> jawline
+- chin/menton/pogonion -> chin
+- cheek/malar/zygomatic/nasolabial angle/columellar show/columellar-lobular angle -> cheek
+- nasal base -> nasal_base
+- columella -> columella
+- septal region/septal deviation -> septal_region
+- left side/right side -> left_side/right_side
+"""
+
+PARAMETER_NOTES = """
+Parameter notes:
+- "fullness"/"plump"/"prominence" -> fullness
+- "definition"/"sharpen"/"contour"/"angular" -> definition
+- If a lip instruction does not say upper or lower, set target to null (it is ambiguous).
+- "hump"/"bump"/"dorsal hump"/"dorsal prominence" -> nasal_bridge with operation decrease (reduction)
+- "droopy tip" -> nasal_tip with operation decrease (height) or increase (rotation downward)
+- "button nose"/"scooped" -> nasal_tip with operation increase (rotation upward)
+- "refined tip"/"tip definition" -> nasal_tip with operation increase (definition)
+- "alar flare"/"nostril flare" -> nostril_region with operation widen
+- "alar base width" -> nostril_region with operation increase (width)
+- "nasolabial angle" -> cheek with operation increase/decrease (angle)
+- "columellar show" -> cheek with operation increase/decrease (projection)
+- "columellar-lobular angle" -> cheek with operation increase/decrease (angle)
+- "left-right asymmetry"/"asymmetry" -> jawline with operation increase/decrease (definition)
+"""
+
+
+SYSTEM_INSTRUCTION = f"""
 You are a clinical simulation command parser for a facial-simulation training prototype.
 You do not give medical advice and you never recommend procedures.
 You translate the surgeon's instruction into a strict JSON schema.
@@ -30,34 +87,24 @@ Never invent numerical values. If a measurement is missing or qualitative, set v
 If a phrase is negated (e.g. "do not reduce the bridge"), set operation to null.
 If a region is unsupported (brow, forehead, eyes, ears, mouth), set target to null.
 
-Supported targets (enums):
-nasal_bridge, nasal_dorsum, nasal_tip, nostril_region,
-upper_lip, lower_lip, chin, jawline, cheek
+{SUPPORTED_TARGETS}
 
-Supported parameters (enums):
-height, width, projection, rotation, fullness, definition
+{SUPPORTED_PARAMS}
 
-Supported operations (enums):
-increase, decrease, rotate, narrow, widen, raise, lower
+{SUPPORTED_OPS}
 
-Supported units (enums):
-mm, cm, degrees
+{SUPPORTED_UNITS}
 
-Anatomical synonyms: bridge/radix -> nasal_bridge, dorsum -> nasal_dorsum,
-tip/pronasale/supratip -> nasal_tip, nostril/alar/ala -> nostril_region,
-upper lip -> upper_lip, lower lip -> lower_lip, chin/menton/pogonion -> chin,
-jaw/jawline/mandible -> jawline, cheek/malar/zygomatic -> cheek.
+{ANATOMICAL_SYNONYMS}
 
-Parameter notes: "fullness"/"plump"/"prominence" -> fullness;
-"definition"/"sharpen"/"contour"/"angular" -> definition. If a lip instruction
-does not say upper or lower, set target to null (it is ambiguous).
+{PARAMETER_NOTES}
 
 Multiple instructions: return one array element per independent instruction, in spoken order.
 
 Return JSON with this exact shape:
-{
+{{
   "instructions": [
-    {
+    {{
       "target": string | null,
       "parameter": string | null,
       "operation": string | null,
@@ -66,9 +113,9 @@ Return JSON with this exact shape:
       "direction": "up" | "down" | null,
       "confidence": number,
       "original_text": string
-    }
+    }}
   ]
-}
+}}
 Report the unit exactly as spoken (do not convert cm to mm yourself).
 """
 

@@ -78,7 +78,7 @@ were left untouched.
 | **Report** | "Save report" produced correct Markdown: session id/started/status, all 17 final parameter values, confirmed changes, unresolved proposals, saved scenarios, and the **Limitations** block (not a clinical document). |
 | **Rename / Delete** | Rename + delete (guarded by a confirm dialog) both work; timeline records "Scenario renamed"/"Scenario deleted". |
 | **End consultation** | Badge → "Ended · temporary"; typed input and scenario save disabled; review cleared. |
-| "New consultation" with unsaved work | Confirmation dialog → discard → clean baseline, empty history, report disabled. | ✓ |
+| "New consultation" with unsaved work | Confirmation dialog → discard → clean baseline, empty history, report disabled. |
 
 ### 3.2 Multi-region isolation (Scenario F)
 

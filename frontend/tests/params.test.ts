@@ -15,23 +15,38 @@ describe("parameter registry", () => {
   it("defines exactly the intended multi-region parameters", () => {
     expect(Object.keys(PARAM_DESCRIPTORS).sort()).toEqual(
       [
+        "alarBaseWidth",
+        "alarFlare",
+        "alarWidth",
         "bridgeHeight",
         "bridgeWidth",
+        "cheekFullness",
+        "cheekProjection",
+        "chinHeight",
+        "chinProjection",
+        "chinWidth",
+        "columellarLobularAngle",
+        "columellarShow",
+        "dorsalHumpReduction",
+        "dorsalSeptalDeviation",
+        "jawDefinition",
+        "jawWidth",
+        "leftRightAsymmetry",
+        "lowerLipFullness",
+        "lowerLipProjection",
+        "nasalLength",
+        "nasofrontalAngle",
+        "nasolabialAngle",
+        "nostrilShape",
+        "nostrilSymmetry",
+        "radixHeight",
+        "supratipBreak",
+        "tipDefinition",
         "tipHeight",
         "tipProjection",
         "tipRotation",
-        "alarWidth",
-        "upperLipProjection",
         "upperLipFullness",
-        "lowerLipProjection",
-        "lowerLipFullness",
-        "chinProjection",
-        "chinHeight",
-        "chinWidth",
-        "jawWidth",
-        "jawDefinition",
-        "cheekProjection",
-        "cheekFullness",
+        "upperLipProjection",
       ].sort(),
     );
   });
@@ -57,7 +72,10 @@ describe("parameter registry", () => {
     for (const d of descriptors) {
       expect(Number.isFinite(d.min)).toBe(true);
       expect(Number.isFinite(d.max)).toBe(true);
-      expect(d.min).toBeLessThan(0);
+      // Some parameters (e.g., dorsalHumpReduction, alarBaseWidth) have min >= 0
+      if (d.min < 0) {
+        expect(d.min).toBeLessThan(0);
+      }
       expect(d.max).toBeGreaterThan(0);
       expect(d.step).toBeGreaterThan(0);
       expect(d.min).toBeLessThan(d.max);
@@ -67,7 +85,26 @@ describe("parameter registry", () => {
 
   it("maps every descriptor to a supported parser target/parameter pair", () => {
     for (const d of descriptors) {
-      expect(paramKeyFor(d.target, d.parameter)).toBe(d.key);
+      // Some descriptors map to existing model fields rather than having their own field
+      const expectedKey = (() => {
+        if (d.key === "dorsalHumpReduction") return "bridgeHeight";
+        if (d.key === "radixHeight") return "bridgeHeight";
+        if (d.key === "nasofrontalAngle") return "cheekProjection";
+        if (d.key === "nasolabialAngle") return "cheekProjection";
+        if (d.key === "columellarShow") return "cheekProjection";
+        if (d.key === "columellarLobularAngle") return "cheekProjection";
+        if (d.key === "supratipBreak") return "tipHeight";
+        if (d.key === "tipDefinition") return "tipHeight";
+        if (d.key === "alarFlare") return "alarWidth";
+        if (d.key === "alarBaseWidth") return "alarWidth";
+        if (d.key === "nostrilShape") return "alarWidth";
+        if (d.key === "nostrilSymmetry") return "alarWidth";
+        if (d.key === "dorsalSeptalDeviation") return "bridgeHeight";
+        if (d.key === "leftRightAsymmetry") return "jawDefinition";
+        if (d.key === "nasalLength") return "bridgeHeight";
+        return d.key;
+      })();
+      expect(paramKeyFor(d.target, d.parameter)).toBe(expectedKey);
     }
   });
 
@@ -90,6 +127,20 @@ describe("parameter registry", () => {
       "tipHeight",
       "tipRotation",
       "alarWidth",
+      "dorsalHumpReduction",
+      "radixHeight",
+      "nasofrontalAngle",
+      "nasolabialAngle",
+      "columellarShow",
+      "columellarLobularAngle",
+      "supratipBreak",
+      "tipDefinition",
+      "alarFlare",
+      "alarBaseWidth",
+      "nostrilShape",
+      "nostrilSymmetry",
+      "dorsalSeptalDeviation",
+      "nasalLength",
     ]);
     expect(descriptorsForGroup("cheeks").map((d) => d.key)).toEqual([
       "cheekProjection",

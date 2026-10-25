@@ -23,6 +23,8 @@ VoiceSurg 3D is a highly interactive, voice-controlled 3D surgical planning simu
 
 See [`docs/FINAL_VERIFICATION_REPORT.md`](docs/FINAL_VERIFICATION_REPORT.md) for the end-to-end verification record and [`docs/FINAL_DEMO_SCRIPT.md`](docs/FINAL_DEMO_SCRIPT.md) for a guided demo. The realistic-face, operating-mode and history features are documented in [`docs/REALISTIC_FACE_IMPLEMENTATION.md`](docs/REALISTIC_FACE_IMPLEMENTATION.md), [`docs/LIVE_SIMULATION_MODE.md`](docs/LIVE_SIMULATION_MODE.md) and [`docs/CONSULTATION_HISTORY_STORAGE.md`](docs/CONSULTATION_HISTORY_STORAGE.md). The patient-specific face reconstruction is documented in [`docs/MULTIVIEW_FACE_RECONSTRUCTION_REPORT.md`](docs/MULTIVIEW_FACE_RECONSTRUCTION_REPORT.md).
 
+**Maintained documentation:** the in-depth handbook for the current working tree starts at [`docs/README.md`](docs/README.md) — architecture, geometry and reconstruction, user guide, developer guide and reference. Older reports above are retained as historical records.
+
 ## Architecture & Tech Stack
 
 ### Frontend

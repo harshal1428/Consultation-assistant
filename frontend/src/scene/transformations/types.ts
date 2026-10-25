@@ -28,6 +28,22 @@ export interface ModelState {
   cheekProjection: number;
   /** Outward fullness of the malar region, both sides. */
   cheekFullness: number;
+  // Additional clinical parameters
+  dorsalHumpReduction: number;
+  radixHeight: number;
+  nasofrontalAngle: number;
+  nasolabialAngle: number;
+  columellarShow: number;
+  columellarLobularAngle: number;
+  supratipBreak: number;
+  tipDefinition: number;
+  alarFlare: number;
+  alarBaseWidth: number;
+  nostrilShape: number;
+  nostrilSymmetry: number;
+  dorsalSeptalDeviation: number;
+  leftRightAsymmetry: number;
+  nasalLength: number;
 }
 
 export const initialModelState: ModelState = {
@@ -48,6 +64,21 @@ export const initialModelState: ModelState = {
   jawDefinition: 0,
   cheekProjection: 0,
   cheekFullness: 0,
+  dorsalHumpReduction: 0,
+  radixHeight: 0,
+  nasofrontalAngle: 0,
+  nasolabialAngle: 0,
+  columellarShow: 0,
+  columellarLobularAngle: 0,
+  supratipBreak: 0,
+  tipDefinition: 0,
+  alarFlare: 0,
+  alarBaseWidth: 0,
+  nostrilShape: 0,
+  nostrilSymmetry: 0,
+  dorsalSeptalDeviation: 0,
+  leftRightAsymmetry: 0,
+  nasalLength: 0,
 };
 
 /** Any field the deformation engine can actually drive. */
@@ -62,7 +93,12 @@ export type TargetRegion =
   | "lower_lip"
   | "chin"
   | "jawline"
-  | "cheek";
+  | "cheek"
+  | "nasal_base"
+  | "columella"
+  | "septal_region"
+  | "left_side"
+  | "right_side";
 
 export type Parameter =
   | "height"
@@ -159,7 +195,22 @@ export type ParamKey =
   | "jawWidth"
   | "jawDefinition"
   | "cheekProjection"
-  | "cheekFullness";
+  | "cheekFullness"
+  | "dorsalHumpReduction"
+  | "radixHeight"
+  | "nasofrontalAngle"
+  | "nasolabialAngle"
+  | "columellarShow"
+  | "columellarLobularAngle"
+  | "supratipBreak"
+  | "tipDefinition"
+  | "alarFlare"
+  | "alarBaseWidth"
+  | "nostrilShape"
+  | "nostrilSymmetry"
+  | "dorsalSeptalDeviation"
+  | "leftRightAsymmetry"
+  | "nasalLength";
 
 /** Parameters that the slider panel can display and adjust. */
 export const SIMULATED_PARAM_KEYS: ParamKey[] = [
@@ -180,6 +231,21 @@ export const SIMULATED_PARAM_KEYS: ParamKey[] = [
   "jawDefinition",
   "cheekProjection",
   "cheekFullness",
+  "dorsalHumpReduction",
+  "radixHeight",
+  "nasofrontalAngle",
+  "nasolabialAngle",
+  "columellarShow",
+  "columellarLobularAngle",
+  "supratipBreak",
+  "tipDefinition",
+  "alarFlare",
+  "alarBaseWidth",
+  "nostrilShape",
+  "nostrilSymmetry",
+  "dorsalSeptalDeviation",
+  "leftRightAsymmetry",
+  "nasalLength",
 ];
 
 export type ViewMode = "before" | "after" | "compare";

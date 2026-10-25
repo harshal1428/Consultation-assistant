@@ -462,6 +462,323 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
     voice: true,
     manual: true,
   },
+
+  /* ----------------------- Additional Clinical Parameters ---------------------- */
+  dorsalHumpReduction: {
+    key: "dorsalHumpReduction",
+    label: "Dorsal hump reduction",
+    shortLabel: "Dorsal hump",
+    unit: "mm",
+    target: "nasal_bridge",
+    parameter: "height",
+    group: "nose",
+    min: 0,
+    max: 10,
+    step: 1,
+    default: 0,
+    hint: "Reduction of the dorsal hump (convexity) on the nasal bridge.",
+    positive: "Reduce hump (lower dorsum)",
+    negative: "N/A (reduction only)",
+    operations: ["decrease"],
+    deformation: "bridgeWeight",
+    supported: true,
+    voice: true,
+    manual: true,
+  },
+  radixHeight: {
+    key: "radixHeight",
+    label: "Radix height",
+    shortLabel: "Radix height",
+    unit: "mm",
+    target: "nasal_bridge",
+    parameter: "height",
+    group: "nose",
+    min: -5,
+    max: 10,
+    step: 1,
+    default: 0,
+    hint: "Height of the radix (nasal root) at the nasofrontal junction.",
+    positive: "Higher radix",
+    negative: "Lower radix",
+    operations: ["increase", "decrease", "raise", "lower"],
+    deformation: "bridgeWeight",
+    supported: true,
+    voice: true,
+    manual: true,
+  },
+  nasofrontalAngle: {
+    key: "nasofrontalAngle",
+    label: "Nasofrontal angle",
+    shortLabel: "Nasofrontal angle",
+    unit: "degrees",
+    target: "cheek",
+    parameter: "rotation",
+    group: "nose",
+    min: 115,
+    max: 150,
+    step: 1,
+    default: 130,
+    hint: "Angle between the nasal dorsum and the forehead (glabella).",
+    positive: "More obtuse angle",
+    negative: "More acute angle",
+    operations: ["increase", "decrease"],
+    deformation: "bridgeWeight",
+    supported: true,
+    voice: true,
+    manual: true,
+  },
+  nasolabialAngle: {
+    key: "nasolabialAngle",
+    label: "Nasolabial angle",
+    shortLabel: "Nasolabial angle",
+    unit: "degrees",
+    target: "cheek",
+    parameter: "rotation",
+    group: "nose",
+    min: 80,
+    max: 120,
+    step: 1,
+    default: 95,
+    hint: "Angle between the columella and the upper lip.",
+    positive: "More obtuse angle",
+    negative: "More acute angle",
+    operations: ["increase", "decrease"],
+    deformation: "bridgeWeight",
+    supported: true,
+    voice: true,
+    manual: true,
+  },
+  columellarShow: {
+    key: "columellarShow",
+    label: "Columellar show",
+    shortLabel: "Columellar show",
+    unit: "mm",
+    target: "cheek",
+    parameter: "projection",
+    group: "nose",
+    min: 0,
+    max: 6,
+    step: 1,
+    default: 3,
+    hint: "Visible height of the columella below the nostril rim.",
+    positive: "More columellar show",
+    negative: "Less columellar show",
+    operations: ["increase", "decrease"],
+    deformation: "bridgeWeight",
+    supported: true,
+    voice: true,
+    manual: true,
+  },
+  columellarLobularAngle: {
+    key: "columellarLobularAngle",
+    label: "Columellar-lobular angle",
+    shortLabel: "Columellar-lobular angle",
+    unit: "degrees",
+    target: "cheek",
+    parameter: "rotation",
+    group: "nose",
+    min: 30,
+    max: 70,
+    step: 1,
+    default: 45,
+    hint: "Angle between the columella and the lobule of the ear (or lobule reference).",
+    positive: "More obtuse angle",
+    negative: "More acute angle",
+    operations: ["increase", "decrease"],
+    deformation: "bridgeWeight",
+    supported: true,
+    voice: true,
+    manual: true,
+  },
+  supratipBreak: {
+    key: "supratipBreak",
+    label: "Supratip break",
+    shortLabel: "Supratip break",
+    unit: "mm",
+    target: "nasal_tip",
+    parameter: "height",
+    group: "nose",
+    min: -3,
+    max: 3,
+    step: 1,
+    default: 0,
+    hint: "The subtle depression just above the tip (supratip depression).",
+    positive: "Deeper supratip break",
+    negative: "Shallower supratip break",
+    operations: ["increase", "decrease"],
+    deformation: "tipWeight",
+    supported: true,
+    voice: true,
+    manual: true,
+  },
+  tipDefinition: {
+    key: "tipDefinition",
+    label: "Tip definition",
+    shortLabel: "Tip definition",
+    unit: "mm",
+    target: "nasal_tip",
+    parameter: "definition",
+    group: "nose",
+    min: -3,
+    max: 5,
+    step: 1,
+    default: 0,
+    hint: "Sharpness/contour definition of the nasal tip.",
+    positive: "More defined tip",
+    negative: "Softer tip",
+    operations: ["increase", "decrease"],
+    deformation: "tipWeight",
+    supported: true,
+    voice: true,
+    manual: true,
+  },
+  alarFlare: {
+    key: "alarFlare",
+    label: "Alar flare",
+    shortLabel: "Alar flare",
+    unit: "mm",
+    target: "nostril_region",
+    parameter: "width",
+    group: "nose",
+    min: -5,
+    max: 5,
+    step: 1,
+    default: 0,
+    hint: "Lateral flaring of the alar wings (distinct from alar base width).",
+    positive: "More flaring",
+    negative: "Less flaring",
+    operations: ["increase", "decrease", "widen", "narrow"],
+    deformation: "alarWeight",
+    supported: true,
+    voice: true,
+    manual: true,
+  },
+  alarBaseWidth: {
+    key: "alarBaseWidth",
+    label: "Alar base width",
+    shortLabel: "Alar base width",
+    unit: "mm",
+    target: "nostril_region",
+    parameter: "width",
+    group: "nose",
+    min: 0,
+    max: 10,
+    step: 1,
+    default: 0,
+    hint: "Width of the alar base at the nostril sill.",
+    positive: "Wider alar base",
+    negative: "Narrower alar base",
+    operations: ["increase", "decrease", "widen", "narrow"],
+    deformation: "alarWeight",
+    supported: true,
+    voice: true,
+    manual: true,
+  },
+  nostrilShape: {
+    key: "nostrilShape",
+    label: "Nostril shape",
+    shortLabel: "Nostril shape",
+    unit: "mm",
+    target: "nostril_region",
+    parameter: "definition",
+    group: "nose",
+    min: -3,
+    max: 3,
+    step: 1,
+    default: 0,
+    hint: "Contour/shape of the nostril opening (oval, round, slit-like).",
+    positive: "More oval/round",
+    negative: "More slit-like",
+    operations: ["increase", "decrease"],
+    deformation: "alarWeight",
+    supported: false,
+    voice: true,
+    manual: false,
+  },
+  nostrilSymmetry: {
+    key: "nostrilSymmetry",
+    label: "Nostril symmetry",
+    shortLabel: "Nostril symmetry",
+    unit: "mm",
+    target: "nostril_region",
+    parameter: "definition",
+    group: "nose",
+    min: -3,
+    max: 3,
+    step: 1,
+    default: 0,
+    hint: "Left-right symmetry of the nostril openings.",
+    positive: "More symmetric",
+    negative: "More asymmetric",
+    operations: ["increase", "decrease"],
+    deformation: "alarWeight",
+    supported: false,
+    voice: true,
+    manual: false,
+  },
+  dorsalSeptalDeviation: {
+    key: "dorsalSeptalDeviation",
+    label: "Dorsal/septal deviation",
+    shortLabel: "Dorsal/septal deviation",
+    unit: "mm",
+    target: "septal_region",
+    parameter: "projection",
+    group: "nose",
+    min: -5,
+    max: 5,
+    step: 1,
+    default: 0,
+    hint: "Deviation of the dorsal septum from the midline.",
+    positive: "Deviation to right",
+    negative: "Deviation to left",
+    operations: ["increase", "decrease"],
+    deformation: "bridgeWeight",
+    supported: false,
+    voice: true,
+    manual: false,
+  },
+  leftRightAsymmetry: {
+    key: "leftRightAsymmetry",
+    label: "Left-right asymmetry",
+    shortLabel: "Asymmetry",
+    unit: "mm",
+    target: "jawline",
+    parameter: "definition",
+    group: "jawline",
+    min: -5,
+    max: 5,
+    step: 1,
+    default: 0,
+    hint: "Left-right asymmetry of the lower face/jaw.",
+    positive: "Right side more prominent",
+    negative: "Left side more prominent",
+    operations: ["increase", "decrease"],
+    deformation: "jawDefinitionWeight",
+    supported: false,
+    voice: true,
+    manual: false,
+  },
+  nasalLength: {
+    key: "nasalLength",
+    label: "Nasal length",
+    shortLabel: "Nasal length",
+    unit: "mm",
+    target: "nasal_bridge",
+    parameter: "height",
+    group: "nose",
+    min: 30,
+    max: 70,
+    step: 1,
+    default: 50,
+    hint: "Total length of the nose from radix to tip.",
+    positive: "Longer nose",
+    negative: "Shorter nose",
+    operations: ["increase", "decrease"],
+    deformation: "bridgeWeight",
+    supported: true,
+    voice: true,
+    manual: true,
+  },
 };
 
 export function descriptorFor(key: ParamKey): ParamDescriptor {
@@ -476,6 +793,7 @@ export interface RegionOption {
 /** Regions an instruction can be re-targeted to while editing. */
 export const REGION_OPTIONS: RegionOption[] = [
   { id: "nasal_bridge", label: "Nasal bridge" },
+  { id: "nasal_dorsum", label: "Nasal dorsum" },
   { id: "nasal_tip", label: "Nasal tip" },
   { id: "nostril_region", label: "Nostril region" },
   { id: "upper_lip", label: "Upper lip" },
@@ -483,6 +801,11 @@ export const REGION_OPTIONS: RegionOption[] = [
   { id: "chin", label: "Chin" },
   { id: "jawline", label: "Jawline" },
   { id: "cheek", label: "Cheeks" },
+  { id: "nasal_base", label: "Nasal base" },
+  { id: "columella", label: "Columella" },
+  { id: "septal_region", label: "Septal region" },
+  { id: "left_side", label: "Left side" },
+  { id: "right_side", label: "Right side" },
 ];
 
 /** Parameters that map to a real model field for a given region. */
@@ -528,10 +851,12 @@ export function paramKeyFor(
     if (p === "height") return "tipHeight";
     if (p === "projection") return "tipProjection";
     if (p === "rotation") return "tipRotation";
+    if (p === "definition") return "tipHeight"; // tipDefinition uses tipWeight which affects tipHeight
   }
   if (target === "nostril_region") {
     // Alar width is its own field, structurally independent of bridge width.
     if (p === "width") return "alarWidth";
+    if (p === "definition") return "alarFlare";
   }
   if (target === "upper_lip") {
     if (p === "projection") return "upperLipProjection";
@@ -554,6 +879,52 @@ export function paramKeyFor(
   if (target === "cheek") {
     if (p === "projection") return "cheekProjection";
     if (p === "fullness") return "cheekFullness";
+    if (p === "rotation") {
+      // Nasofrontal angle, nasolabial angle, columellar-lobular angle
+      return "cheekProjection"; // reuse cheek projection for angle changes
+    }
+  }
+  if (target === "nasal_base") {
+    if (p === "height") return "radixHeight";
+    if (p === "width") return "bridgeWidth";
+  }
+  if (target === "columella") {
+    if (p === "projection") return "columellarShow";
+    if (p === "rotation") return "columellarLobularAngle";
+  }
+  if (target === "septal_region") {
+    if (p === "projection") return "dorsalSeptalDeviation";
+  }
+  if (target === "left_side" || target === "right_side") {
+    if (p === "definition") return "leftRightAsymmetry";
+  }
+  if (target === "nasal_bridge" && p === "height") {
+    // Dorsal hump reduction maps to bridge height reduction
+    return "bridgeHeight";
+  }
+  if (target === "nasal_tip" && p === "height") {
+    // Supratip break maps to tip height
+    return "tipHeight";
+  }
+  if (target === "nasal_tip" && p === "definition") {
+    // Tip definition
+    return "tipDefinition";
+  }
+  if (target === "nostril_region" && p === "width") {
+    // Alar base width and alar flare both map to alar width/flare
+    return "alarWidth";
+  }
+  if (target === "cheek" && p === "rotation") {
+    // Nasofrontal angle, nasolabial angle, columellar-lobular angle
+    return "cheekProjection";
+  }
+  if (target === "cheek" && p === "projection") {
+    // Columellar show
+    return "cheekProjection";
+  }
+  if (target === "jawline" && p === "definition") {
+    // Left-right asymmetry
+    return "leftRightAsymmetry";
   }
   return null;
 }
