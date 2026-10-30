@@ -1,3 +1,11 @@
 fastapi
 uvicorn
 pydantic
+python-dotenv
+google-genai
+httpx
+websockets
+rapidfuzz
+numpy
+onnxruntime>=1.16.1
+jiwer

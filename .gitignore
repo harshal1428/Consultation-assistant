@@ -27,6 +27,20 @@ yarn-error.log*
 frontend/dist/
 frontend/node_modules/
 
+# Generated evaluation reports and local development audio
+backend/tests/gold/reports/
+backend/tests/audio_local/
+*.onnx
+*.pt
+*.pth
+*.bin
+*.wav
+*.pcm
+*.webm
+
+# Python test caches
+.pytest_cache/
+
 # IDEs and OS
 .vscode/
 .idea/

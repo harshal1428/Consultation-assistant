@@ -1,0 +1,8 @@
+# Optional real speech-recognition dependencies.
+#
+# The core app and CI use the fake ASR backend and do not install this file.
+# `faster-whisper` downloads model weights on first use; weights are not
+# committed. VAD uses onnxruntime from requirements.txt and a separately
+# downloaded Silero ONNX model (see docs/VOICE.md).
+faster-whisper>=1.0.0
+soundfile>=0.12.1

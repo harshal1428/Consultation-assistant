@@ -1,0 +1,2 @@
+# Development/test-only Python dependencies.
+pytest>=8
