@@ -27,6 +27,10 @@ pathway; commitment/live logic remains in the TypeScript live module.
 
 ## Frontend controls
 
+The consultation microphone and the Live panel share the same server capture
+hook in `server` mode. The consultation button starts/stops a continuous
+session; its transcript goes through the normal proposal review.
+
 - **Start live simulation** opens a continuous microphone stream and sends
   `open_mic`.
 - **Hold to talk** uses `ptt_start` / `ptt_end` and works without continuous

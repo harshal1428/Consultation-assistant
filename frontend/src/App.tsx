@@ -184,6 +184,8 @@ function App() {
   patientIdentityRef.current = patientIdentity;
   const activeProposalIdRef = useRef(activeProposalId);
   activeProposalIdRef.current = activeProposalId;
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
 
   // Live Simulation (Objective 3/4): append-only change log plus a token used
   // to discard stale async parses once a consultation is reset or replaced.
@@ -203,19 +205,6 @@ function App() {
     const id = activeProposalIdRef.current;
     return id ? sessionRef.current.proposals.find((p) => p.id === id) ?? null : null;
   }, []);
-
-  const phase: ConsultationPhase =
-    speechError || apiError
-      ? "error"
-      : isListening
-        ? "listening"
-        : isProcessing
-          ? "processing"
-          : pendingCommands.length > 0
-            ? "review"
-            : transcript
-              ? "transcribed"
-              : "ready";
 
   // Backend reachability probe for the header status indicator.
   useEffect(() => {
@@ -515,7 +504,15 @@ function App() {
   });
 
   const serverLive = useServerVoice({
-    onUtterance: (text) => void runLiveInstruction(text, "live_voice"),
+    onUtterance: (text) => {
+      // The same server capture hook serves both modes. Live uses the commitment
+      // path; consultation goes straight to the normal proposal review.
+      if (modeRef.current === "live") {
+        void runLiveInstruction(text, "live_voice");
+      } else {
+        void parseText(text, "voice");
+      }
+    },
     onError: () => {
       /* Surfaced through the hook's `error` field. */
     },
@@ -523,17 +520,56 @@ function App() {
 
   const live = VOICE_MODE === "legacy" ? legacyLive : serverLive;
 
-  // Live voice belongs to Live Simulation mode only. Leaving that mode releases
-  // the microphone without ending or deleting the consultation.
+  const phase: ConsultationPhase =
+    speechError || apiError || (VOICE_MODE === "server" ? serverLive.error : "")
+      ? "error"
+      : VOICE_MODE === "server" && mode === "consultation"
+        ? serverLive.active
+          ? "listening"
+          : isProcessing
+            ? "processing"
+            : pendingCommands.length > 0
+              ? "review"
+              : serverLive.lastFinal
+                ? "transcribed"
+                : "ready"
+        : isListening
+          ? "listening"
+          : isProcessing
+            ? "processing"
+            : pendingCommands.length > 0
+              ? "review"
+              : transcript
+                ? "transcribed"
+                : "ready";
+
+  // Switching modes (or leaving Live) releases the microphone without ending or
+  // deleting the consultation. It also prevents a capture from one mode being
+  // routed by the other mode's callback.
+  const previousModeRef = useRef(mode);
   useEffect(() => {
-    if (mode !== "live") {
-      legacyLive.stop();
-      serverLive.stop();
-    }
+    if (previousModeRef.current === mode) return;
+    previousModeRef.current = mode;
+    legacyLive.stop();
+    serverLive.stop();
+    setTranscript("");
+    setIsListening(false);
   }, [mode, legacyLive.stop, serverLive.stop]);
 
   const handleToggleListening = () => {
     if (!sessionActive) return;
+
+    if (VOICE_MODE === "server") {
+      if (serverLive.active) {
+        serverLive.stop();
+        return;
+      }
+      setSpeechError("");
+      setApiError("");
+      serverLive.start();
+      return;
+    }
+
     if (isListening) {
       speechService.stopListening();
       setIsListening(false);
@@ -658,6 +694,7 @@ function App() {
   };
 
   const stopListeningIfActive = () => {
+    if (VOICE_MODE === "server") serverLive.stop();
     if (isListening) {
       speechService.stopListening();
       setIsListening(false);
@@ -1223,17 +1260,21 @@ function App() {
             {showConsultationPanel ? (
             <ConsultationPanel
               key={`consultation-${session.id}-${workspaceEpoch}`}
-              isListening={isListening}
-              speechSupported={speechService.isSupported}
+              isListening={VOICE_MODE === "server" ? serverLive.active : isListening}
+              speechSupported={
+                VOICE_MODE === "server" ? serverLive.supported : speechService.isSupported
+              }
               phase={phase}
               isProcessing={isProcessing}
-              transcript={transcript}
+              transcript={VOICE_MODE === "server" ? (serverLive.lastFinal?.text ?? "") : transcript}
               language={language}
               onLanguageChange={setLanguage}
               onToggleListening={handleToggleListening}
-              speechError={speechError}
+              speechError={VOICE_MODE === "server" ? serverLive.error : speechError}
               apiError={apiError}
-              onDismissSpeechError={() => setSpeechError("")}
+              onDismissSpeechError={
+                VOICE_MODE === "server" ? serverLive.clearError : () => setSpeechError("")
+              }
               onDismissApiError={() => setApiError("")}
               onSubmitText={handleSubmitText}
               pendingCommands={pendingCommands}

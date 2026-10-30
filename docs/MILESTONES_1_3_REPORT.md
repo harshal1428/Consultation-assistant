@@ -199,7 +199,8 @@ Milestone 3 backend (committed in `c77cc5c`):
 Milestone 3 frontend (this change set):
 
 - `frontend/src/hooks/useServerVoice.ts` — WebSocket, PTT, mute, AudioWorklet /
-  ScriptProcessor fallback, dedupe, transcript state.
+  ScriptProcessor fallback, dedupe, transcript state. The same hook serves the
+  consultation microphone and the Live panel in `server` mode.
 - `frontend/src/audio/pcm-worklet.js` — PCM16 capture processor.
 - `frontend/src/lib/voiceConfig.ts`, `frontend/src/services/api.ts`.
 - `frontend/src/components/LiveSimulationPanel.tsx`, `frontend/src/App.tsx`,
@@ -214,8 +215,8 @@ Milestone 3 frontend (this change set):
 | Check | Result |
 | --- | --- |
 | Backend `pytest -q` | **136 passed, 1 xfailed, 118 subtests passed** |
-| Frontend full `npx vitest run` | **35 files / 272 tests: 269 passed, 3 pre-existing failures** in `params.test.ts`/`geometry.test.ts` (`alarFlare`/`alarWidth`, descriptor `manual`, `dorsalHumpReduction`); no new failures |
-| CI voice/live subset | **7 files, 45 tests passed** |
+| Frontend full `npx vitest run` | **35 files / 273 tests: 270 passed, 3 pre-existing failures** in `params.test.ts`/`geometry.test.ts` (`alarFlare`/`alarWidth`, descriptor `manual`, `dorsalHumpReduction`); no new failures |
+| CI voice/live subset | **7 files, 46 tests passed** |
 | `npx tsc --noEmit` | clean |
 | `npm run build` | clean; pre-existing >500 kB chunk warning |
 

@@ -4,7 +4,10 @@ import type { Instruction } from "../src/scene/transformations/types";
 
 const voiceMock = vi.hoisted(() => ({
   onUtterance: null as ((text: string) => void) | null,
-  start: () => undefined,
+  startCalls: 0,
+  start: () => {
+    voiceMock.startCalls += 1;
+  },
   stop: () => undefined,
   restart: () => undefined,
   clearError: () => undefined,
@@ -80,13 +83,35 @@ function instr(overrides: Partial<Instruction> = {}): Instruction {
 beforeEach(() => {
   parseMock.mockReset();
   voiceMock.onUtterance = null;
+  voiceMock.startCalls = 0;
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("server voice in Live mode", () => {
+describe("server voice", () => {
+  it("uses the server capture path from the consultation microphone", async () => {
+    parseMock.mockResolvedValue({ instructions: [instr()], text: "x" });
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: /start listening/i }));
+    expect(voiceMock.startCalls).toBe(1);
+
+    await act(async () => {
+      voiceMock.onUtterance?.("raise the tip by 2 mm");
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: /Proposed change/ }),
+    ).toBeInTheDocument();
+    expect(parseMock).toHaveBeenCalledWith(
+      "raise the tip by 2 mm",
+      expect.any(Array),
+      "voice",
+    );
+  });
+
   it("opens review instead of auto-applying by default", async () => {
     parseMock.mockResolvedValue({ instructions: [instr()], text: "x" });
     render(<App />);

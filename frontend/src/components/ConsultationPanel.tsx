@@ -110,7 +110,7 @@ export function ConsultationPanel({
 
       {!speechSupported ? (
         <StatusMessage variant="info" title="Voice input unavailable">
-          This browser does not expose the Web Speech API. You can still use the
+          This browser cannot capture microphone audio. You can still use the
           typed command field below.
         </StatusMessage>
       ) : null}
