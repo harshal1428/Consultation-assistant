@@ -5,7 +5,7 @@
 VoiceSurg 3D is a highly interactive, voice-controlled 3D surgical planning simulator. It allows a user (acting as a surgeon) to issue natural language commands such as *"Reduce the bridge by 2 millimeters"* or *"Increase the upper lip projection by 1 mm"*, which the system parses, validates, and applies deterministically to a stylized 3D anatomical model of a face. 
 
 ## Features
-- **Real-Time Voice Input:** Integrated with browser Web Speech API for seamless microphone capture.
+- **Real-Time Voice Input:** Default local server pipeline (microphone → AudioWorklet → `/ws/voice` → VAD + faster-whisper → existing parser) with hold-to-talk, mute, normalisation, lexicon correction and hallucination guards. The old browser Web Speech path remains behind `VITE_VOICE_MODE=legacy`. Voice is review-first by default. See [`docs/VOICE.md`](docs/VOICE.md).
 - **Dual AI Parsing Engine:** Uses a hybrid architecture. Gemini (`gemini-2.5-flash`) extracts clinical intent with complex synonyms via a strict system prompt, with a lightning-fast deterministic Regex parser as a fallback for maximum robustness.
 - **Multi-Instruction Commands:** One utterance can contain several instructions ("reduce the bridge by 2 mm and raise the tip by 1 mm"); each is parsed, validated, and shown as its own review card.
 - **Strict Safety Validations:** Prevents edge cases, rejects ambiguous or negated commands, requests clarification for missing numerical values, and flags out-of-range requests with a suggested adjusted value instead of silently clamping (lengths ±10 mm, angles ±45°).
@@ -31,7 +31,7 @@ See [`docs/FINAL_VERIFICATION_REPORT.md`](docs/FINAL_VERIFICATION_REPORT.md) for
 - **Framework:** React + TypeScript (Vite)
 - **3D Graphics:** Three.js, React Three Fiber, `@react-three/drei`
 - **Styling:** Vanilla CSS with design tokens (`frontend/src/index.css`) — light clinical workspace
-- **Speech Capture:** Native Browser Web Speech API
+- **Speech Capture:** Local server ASR over `/ws/voice` (AudioWorklet + PCM16), with the Browser Web Speech API kept as a legacy fallback
 
 ### Backend
 - **Framework:** Python + FastAPI
@@ -70,7 +70,18 @@ cd frontend
 npm install   # If dependencies aren't installed
 npm run dev
 ```
-*The app will automatically launch locally on `http://localhost:5173`.* Open it in Chrome or Edge (the Web Speech API and the MediaPipe face model work best there).
+*The app will automatically launch locally on `http://localhost:5173`.* Open it in Chrome or Edge (the MediaPipe face model works best there).
+
+Server voice is the default. For local recognition, install the optional voice dependencies and set the frontend flags described in [`docs/VOICE.md`](docs/VOICE.md):
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-voice.txt
+# frontend/.env.local
+# VITE_VOICE_MODE=server
+# VITE_VOICE_AUTOAPPLY=false
+```
+
+The default `ASR_BACKEND=faster-whisper` downloads `small.en` on first use. For offline/browser-only development, set `ASR_BACKEND=fake`, or use `VITE_VOICE_MODE=legacy` to keep the old Web Speech path.
 
 ### 4. Production build (optional)
 ```powershell

@@ -3,6 +3,9 @@ import { Icon } from "./Icon";
 import { StatusMessage } from "./StatusMessage";
 import type { LiveEvent, LiveExecutionStatus } from "../scene/live/types";
 import type { LiveStatus } from "../hooks/useLiveSimulation";
+import type { ServerVoiceDiscard, ServerVoiceFinal } from "../hooks/useServerVoice";
+import type { VoiceMode } from "../lib/voiceConfig";
+import { VoiceGoldRecorder } from "./VoiceGoldRecorder";
 import {
   LIVE_STATUS_LABEL,
   buildLiveCsv,
@@ -23,6 +26,18 @@ interface LiveSimulationPanelProps {
   onRetry: () => void;
   onDismissError: () => void;
   onSubmitTyped: (text: string) => void;
+  voiceMode?: VoiceMode;
+  serverState?: string;
+  pttActive?: boolean;
+  muted?: boolean;
+  /** False means live voice opens the normal proposal review instead of applying. */
+  autoApply?: boolean;
+  lastFinal?: ServerVoiceFinal | null;
+  lastDiscard?: ServerVoiceDiscard | null;
+  onPttStart?: () => void;
+  onPttEnd?: () => void;
+  onToggleMute?: () => void;
+  devTools?: boolean;
 }
 
 const STATUS_LABEL: Record<LiveStatus, string> = {
@@ -70,6 +85,17 @@ export function LiveSimulationPanel({
   onRetry,
   onDismissError,
   onSubmitTyped,
+  voiceMode = "legacy",
+  serverState,
+  pttActive = false,
+  muted = false,
+  autoApply = true,
+  lastFinal = null,
+  lastDiscard = null,
+  onPttStart,
+  onPttEnd,
+  onToggleMute,
+  devTools = false,
 }: LiveSimulationPanelProps) {
   const [typed, setTyped] = useState("");
   const [exportNotice, setExportNotice] = useState("");
@@ -103,6 +129,12 @@ export function LiveSimulationPanel({
   };
 
   const appliedCount = events.filter((e) => e.status === "applied").length;
+  const subtitle =
+    status === "listening" && !autoApply
+      ? "Listening · voice results open for review"
+      : STATUS_LABEL[status];
+  const pttDisabled =
+    !supported || !sessionActive || muted || (status === "listening" && !pttActive);
 
   return (
     <section className="panel live-panel" aria-label="Live simulation">
@@ -111,10 +143,10 @@ export function LiveSimulationPanel({
           <h2 className="panel__title">
             <Icon name="activity" size={16} /> Live simulation
           </h2>
-          <p className="panel__subtitle">{STATUS_LABEL[status]}</p>
+          <p className="panel__subtitle">{subtitle}</p>
         </div>
         <span className={`chip ${status === "listening" ? "chip--ok" : status === "error" ? "chip--error" : "chip--muted"}`}>
-          {status}
+          {voiceMode === "server" && serverState ? serverState : status}
         </span>
       </header>
 
@@ -128,15 +160,63 @@ export function LiveSimulationPanel({
             type="button"
             className="btn btn--primary"
             onClick={onStart}
-            disabled={!supported || !sessionActive}
-            title={supported ? undefined : "Speech recognition is unavailable in this browser."}
+            disabled={!supported || !sessionActive || muted}
+            title={supported ? undefined : "Voice capture is unavailable in this browser."}
           >
             <Icon name="mic" size={16} /> Start live simulation
           </button>
         )}
+
+        {voiceMode === "server" ? (
+          <>
+            <button
+              type="button"
+              className={`btn ${pttActive ? "btn--danger" : "btn--soft"}`}
+              disabled={pttDisabled}
+              aria-pressed={pttActive}
+              onPointerDown={(event) => {
+                if (event.button !== 0) return;
+                event.preventDefault();
+                onPttStart?.();
+              }}
+              onPointerUp={() => onPttEnd?.()}
+              onPointerLeave={() => {
+                if (pttActive) onPttEnd?.();
+              }}
+              onPointerCancel={() => onPttEnd?.()}
+              onKeyDown={(event) => {
+                if (event.key !== " " && event.key !== "Enter") return;
+                event.preventDefault();
+                if (!event.repeat) onPttStart?.();
+              }}
+              onKeyUp={(event) => {
+                if (event.key !== " " && event.key !== "Enter") return;
+                event.preventDefault();
+                onPttEnd?.();
+              }}
+            >
+              <Icon name="mic" size={16} />{" "}
+              {pttActive ? "Release to transcribe" : "Hold to talk"}
+            </button>
+            <button
+              type="button"
+              className="btn btn--ghost"
+              onClick={onToggleMute}
+              aria-pressed={muted}
+              disabled={!supported}
+            >
+              {muted ? "Unmute microphone" : "Mute microphone"}
+            </button>
+          </>
+        ) : null}
+
         {!supported ? (
           <span className="chip chip--warning">Voice unavailable — use the typed field below.</span>
         ) : null}
+        {voiceMode === "server" && !autoApply ? (
+          <span className="chip chip--warning">Voice opens for review before applying.</span>
+        ) : null}
+        {muted ? <span className="chip chip--muted">Microphone muted</span> : null}
       </div>
 
       {error ? (
@@ -152,15 +232,50 @@ export function LiveSimulationPanel({
 
       <div className="live-panel__transcript" aria-live="polite">
         <span className="field__label">Heard</span>
+        {lastDiscard ? (
+          <p className="live-transcript live-transcript--discarded">
+            Ignored “{lastDiscard.rawText || "audio"}” — {lastDiscard.reason}.
+          </p>
+        ) : null}
+        {lastFinal ? (
+          <div className="live-transcript__final">
+            <p className="live-transcript">{lastFinal.text}</p>
+            {lastFinal.rawText !== lastFinal.text ? (
+              <p className="live-transcript__raw">Raw: {lastFinal.rawText}</p>
+            ) : null}
+            {lastFinal.corrections.length > 0 ? (
+              <p className="live-transcript__raw">
+                Corrected:{" "}
+                {lastFinal.corrections
+                  .map((correction) => `${correction.from} → ${correction.to}`)
+                  .join("; ")}
+              </p>
+            ) : null}
+            {lastFinal.lowConfidenceNumbers.length > 0 ? (
+              <p className="live-transcript__raw">
+                Check number{lastFinal.lowConfidenceNumbers.length > 1 ? "s" : ""}:{" "}
+                {lastFinal.lowConfidenceNumbers
+                  .map((hint) => hint.token)
+                  .join(", ")}
+              </p>
+            ) : null}
+            {lastFinal.totalLatencyMs !== null ? (
+              <p className="live-transcript__raw">
+                Transcribed in {Math.round(lastFinal.totalLatencyMs)} ms ·{" "}
+                {lastFinal.vad || "VAD"}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         {interim ? (
           <p className="live-transcript live-transcript--interim">{interim}</p>
-        ) : (
+        ) : !lastFinal && !lastDiscard ? (
           <p className="live-transcript live-transcript--empty">
             {status === "listening"
               ? "Listening… speak an instruction."
               : "Nothing heard yet."}
           </p>
-        )}
+        ) : null}
       </div>
 
       <form className="live-panel__typed" onSubmit={handleTyped}>
@@ -238,6 +353,8 @@ export function LiveSimulationPanel({
           </ol>
         )}
       </div>
+
+      {devTools ? <VoiceGoldRecorder /> : null}
     </section>
   );
 }

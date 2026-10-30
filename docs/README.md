@@ -100,6 +100,8 @@ above supersedes them where they conflict.
 
 | Document | Purpose |
 | --- | --- |
+| [`MILESTONES_1_3_REPORT.md`](MILESTONES_1_3_REPORT.md) | Gold-set baseline, live false-commit measurements, server-voice implementation, verification and risks. |
+| [`VOICE.md`](VOICE.md) | Server voice setup, controls, configuration, VAD/hotwords, dev recorder and ASR evaluation. |
 | [`FINAL_VERIFICATION_REPORT.md`](FINAL_VERIFICATION_REPORT.md) | Phase 8 end-to-end verification record and demo-readiness verdict. |
 | [`IMPLEMENTATION_AUDIT_PLAN.md`](IMPLEMENTATION_AUDIT_PLAN.md) | Audit plan and requirement baseline. |
 | [`IMPLEMENTATION_AUDIT_REPORT.md`](IMPLEMENTATION_AUDIT_REPORT.md) | 126-requirement PASS/PARTIAL/FAIL matrix and gap analysis. |

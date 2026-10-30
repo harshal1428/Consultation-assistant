@@ -2298,6 +2298,33 @@
   align-items: center;
 }
 
+.voice-recorder {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.voice-recorder__head,
+.voice-recorder__controls {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.voice-recorder__utterance {
+  flex: 1;
+  min-width: 220px;
+}
+
+.voice-recorder__audio {
+  width: 100%;
+}
+
 .live-panel__error {
   display: flex;
   gap: 10px;
@@ -2329,6 +2356,22 @@
 
 .live-transcript--interim {
   color: var(--accent-strong);
+}
+
+.live-transcript--discarded {
+  color: var(--danger, #b42318);
+}
+
+.live-transcript__final {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.live-transcript__raw {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-3);
 }
 
 .live-panel__typed {

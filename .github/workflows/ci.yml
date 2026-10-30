@@ -29,6 +29,7 @@ jobs:
     env:
       VITE_VOICE_MODE: server
       VITE_VOICE_AUTOAPPLY: "false"
+      VITE_DEV_TOOLS: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -52,6 +53,9 @@ jobs:
           tests/live.test.ts
           tests/LiveSimulationPanel.test.tsx
           tests/useVoiceCapture.test.tsx
+          tests/voiceServer.test.tsx
+          tests/voiceLiveReview.test.tsx
+          tests/wav.test.ts
       - name: Build
         working-directory: frontend
         run: npm run build

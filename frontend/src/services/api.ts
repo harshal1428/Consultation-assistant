@@ -1,6 +1,10 @@
 import type { ContextItem, ParseResponse } from "../scene/transformations/types";
 
-const API_BASE = "http://127.0.0.1:8000";
+export const API_BASE =
+  String(import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000").replace(/\/+$/, "");
+
+export const voiceWebSocketUrl = (): string =>
+  `${API_BASE.replace(/^http/i, "ws")}/ws/voice`;
 
 function isParseResponse(value: unknown): value is ParseResponse {
   return (
@@ -18,6 +22,7 @@ function isParseResponse(value: unknown): value is ParseResponse {
 export const parseCommandAPI = async (
   text: string,
   context: ContextItem[] = [],
+  source?: "voice" | "typed",
 ): Promise<ParseResponse> => {
   // Backstop for a network-level stall: the backend already bounds the model
   // call, but the UI must never wait forever for a reply.
@@ -28,7 +33,11 @@ export const parseCommandAPI = async (
     response = await fetch(`${API_BASE}/api/parse-command`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, context: context.slice(-4) }),
+      body: JSON.stringify({
+        text,
+        context: context.slice(-4),
+        ...(source ? { source } : {}),
+      }),
       signal: controller.signal,
     });
   } catch {

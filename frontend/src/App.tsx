@@ -69,7 +69,9 @@ import type { PatientIdentity } from "./lib/patient";
 import type { ConsultationSession } from "./scene/session/types";
 import { useFacePersonalization } from "./hooks/useFacePersonalization";
 import { useLiveSimulation } from "./hooks/useLiveSimulation";
+import { useServerVoice } from "./hooks/useServerVoice";
 import { LiveSimulationPanel } from "./components/LiveSimulationPanel";
+import { VOICE_AUTOAPPLY, VOICE_DEV_TOOLS, VOICE_MODE } from "./lib/voiceConfig";
 import { evaluateLiveInstruction, makeLiveEvent } from "./scene/live/logic";
 import type { LiveEvent, LiveEventSource } from "./scene/live/types";
 import { MultiViewPhotoManager } from "./components/MultiViewPhotoManager";
@@ -362,7 +364,7 @@ function App() {
 
     try {
       const context = historyRef.current.slice(-CONTEXT_LIMIT).map(toContextItem);
-      const parsed = await parseCommandAPI(text, context);
+      const parsed = await parseCommandAPI(text, context, source);
       if (
         sessionRef.current.id !== sid ||
         reqRef.current !== token ||
@@ -420,6 +422,14 @@ function App() {
     const trimmed = text.trim();
     if (!trimmed || sessionRef.current.status !== "active") return;
 
+    // Voice is deliberately review-first by default. Typed live commands keep
+    // their explicit auto-apply behaviour; set VITE_VOICE_AUTOAPPLY=true to
+    // restore voice auto-apply during a supervised simulation.
+    if (source === "live_voice" && !VOICE_AUTOAPPLY) {
+      await parseText(trimmed, "voice");
+      return;
+    }
+
     const token = liveTokenRef.current;
     const at = Date.now();
     setIsProcessing(true);
@@ -427,7 +437,11 @@ function App() {
 
     try {
       const context = historyRef.current.slice(-CONTEXT_LIMIT).map(toContextItem);
-      const parsed = await parseCommandAPI(trimmed, context);
+      const parsed = await parseCommandAPI(
+        trimmed,
+        context,
+        source === "live_voice" ? "voice" : "typed",
+      );
       if (liveTokenRef.current !== token || sessionRef.current.status !== "active") return;
 
       seqRef.current += 1;
@@ -490,21 +504,33 @@ function App() {
     } finally {
       if (liveTokenRef.current === token) setIsProcessing(false);
     }
-  }, []);
+  }, [parseText]);
 
-  const live = useLiveSimulation({
+  const legacyLive = useLiveSimulation({
     lang: language,
     onUtterance: (text) => void runLiveInstruction(text, "live_voice"),
     onError: () => {
-      /* Surfaced through `live.error`; kept for callers that want a side effect. */
+      /* Surfaced through the hook's `error` field. */
     },
   });
+
+  const serverLive = useServerVoice({
+    onUtterance: (text) => void runLiveInstruction(text, "live_voice"),
+    onError: () => {
+      /* Surfaced through the hook's `error` field. */
+    },
+  });
+
+  const live = VOICE_MODE === "legacy" ? legacyLive : serverLive;
 
   // Live voice belongs to Live Simulation mode only. Leaving that mode releases
   // the microphone without ending or deleting the consultation.
   useEffect(() => {
-    if (mode !== "live") live.stop();
-  }, [mode, live.stop]);
+    if (mode !== "live") {
+      legacyLive.stop();
+      serverLive.stop();
+    }
+  }, [mode, legacyLive.stop, serverLive.stop]);
 
   const handleToggleListening = () => {
     if (!sessionActive) return;
@@ -1181,6 +1207,17 @@ function App() {
                 onRetry={live.restart}
                 onDismissError={live.clearError}
                 onSubmitTyped={(text) => void runLiveInstruction(text, "typed")}
+                voiceMode={VOICE_MODE}
+                serverState={VOICE_MODE === "server" ? serverLive.serverState : undefined}
+                pttActive={VOICE_MODE === "server" ? serverLive.pttActive : false}
+                muted={VOICE_MODE === "server" ? serverLive.muted : false}
+                autoApply={VOICE_AUTOAPPLY}
+                lastFinal={VOICE_MODE === "server" ? serverLive.lastFinal : null}
+                lastDiscard={VOICE_MODE === "server" ? serverLive.lastDiscard : null}
+                onPttStart={VOICE_MODE === "server" ? serverLive.pttStart : undefined}
+                onPttEnd={VOICE_MODE === "server" ? serverLive.pttEnd : undefined}
+                onToggleMute={VOICE_MODE === "server" ? serverLive.toggleMute : undefined}
+                devTools={VOICE_DEV_TOOLS}
               />
             ) : null}
             {showConsultationPanel ? (
