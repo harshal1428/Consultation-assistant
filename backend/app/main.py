@@ -1,11 +1,12 @@
 import logging
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 
+from . import consultation_store
 from .parser_service import parse_command
-from .schemas import CommandRequest, ParseResponse
+from .schemas import CommandRequest, ConsultationRecord, ParseResponse
 
 import os
 
@@ -49,3 +50,47 @@ def parse_command_endpoint(request: CommandRequest) -> ParseResponse:
         )
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Consultation archive (SQLite)
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/consultations", response_model=list[ConsultationRecord])
+def list_consultations_endpoint() -> list[ConsultationRecord]:
+    """Return every archived consultation, newest first."""
+    return [ConsultationRecord(**record) for record in consultation_store.list_consultations()]
+
+
+@app.get("/api/consultations/{consultation_id}", response_model=ConsultationRecord)
+def get_consultation_endpoint(consultation_id: str) -> ConsultationRecord:
+    record = consultation_store.get_consultation(consultation_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Consultation not found")
+    return ConsultationRecord(**record)
+
+
+@app.post("/api/consultations", response_model=ConsultationRecord, status_code=201)
+def save_consultation_endpoint(record: ConsultationRecord) -> ConsultationRecord:
+    """Insert a new consultation or update one with the same id.
+
+    Saving the same session twice (for example auto-save on end followed by an
+    explicit archive) overwrites the record instead of creating a duplicate.
+    """
+    payload = record.model_dump(by_alias=True)
+    stored = consultation_store.save_consultation(payload)
+    return ConsultationRecord(**stored)
+
+
+@app.delete("/api/consultations/{consultation_id}", status_code=204)
+def delete_consultation_endpoint(consultation_id: str) -> Response:
+    if not consultation_store.delete_consultation(consultation_id):
+        raise HTTPException(status_code=404, detail="Consultation not found")
+    return Response(status_code=204)
+
+
+@app.delete("/api/consultations", status_code=204)
+def clear_consultations_endpoint() -> Response:
+    consultation_store.clear_consultations()
+    return Response(status_code=204)

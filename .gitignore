@@ -14,6 +14,11 @@ dist/
 *.egg-info/
 *.egg
 
+# Local SQLite consultation archive
+backend/app/data/*.db
+backend/app/data/*.db-shm
+backend/app/data/*.db-wal
+
 # Node / React
 node_modules/
 npm-debug.log*

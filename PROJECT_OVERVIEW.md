@@ -138,6 +138,7 @@ Instead of requiring surgeons to interact with complex CAD gizmos, sliders, or t
 ### 6. Safety Constraints & Audit Trail
 - **Simulation Range Guards:** Automatically blocks anatomically impossible values (e.g. `> 20 mm` or `> 45°`).
 - **Session History & Rollback:** Every executed modification is logged with original voice text, timestamp, and parameter deltas, allowing one-click undo/reset.
+- **Previous Consultations (SQLite):** Each consultation is archived to a local SQLite database on the backend machine (auto-saved on end/new and while working), with a **Previous consultations** panel to review the summary and restore the full session. IndexedDB is only an offline cache fallback.
 
 ---
 

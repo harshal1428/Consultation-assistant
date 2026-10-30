@@ -2,6 +2,12 @@ import type { ModelState } from "../scene/transformations/types";
 import type { FaceMorph } from "../scene/geometry/faceMorph";
 import type { FaceProfile } from "../services/faceReconstruction";
 import type { LiveEvent } from "../scene/live/types";
+import type {
+  Proposal,
+  Scenario,
+  SessionEvent,
+  TranscriptEntry,
+} from "../scene/session/types";
 
 /**
  * Local consultation archive.
@@ -31,6 +37,7 @@ export interface ArchivedConsultation {
   label: string;
   savedAt: number;
   startedAt: number;
+  endedAt?: number | null;
   status: string;
   changeCount: number;
   scenarioCount: number;
@@ -40,6 +47,14 @@ export interface ArchivedConsultation {
   personalization?: ArchivedPersonalization | null;
   /** Live Simulation change log captured with this record. */
   liveEvents?: LiveEvent[];
+  /**
+   * Full narrative snapshot. These are optional so older archived records
+   * (and callers that only need the model state) remain valid.
+   */
+  transcript?: TranscriptEntry[];
+  proposals?: Proposal[];
+  events?: SessionEvent[];
+  scenarios?: Scenario[];
 }
 
 const DB_NAME = "voicesurg-history";

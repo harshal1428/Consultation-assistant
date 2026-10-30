@@ -81,6 +81,21 @@ export function FaceViewer({
         />
       </Canvas>
 
+      {heatmapMode ? (
+        <div
+          className="face-viewer__heatmap-legend"
+          role="img"
+          aria-label="Displacement heatmap: blue is low movement, green is medium movement, red is high movement"
+        >
+          <span className="face-viewer__heatmap-title">Displacement</span>
+          <span className="face-viewer__heatmap-bar" aria-hidden="true" />
+          <span className="face-viewer__heatmap-scale" aria-hidden="true">
+            <span>Low</span>
+            <span>High</span>
+          </span>
+        </div>
+      ) : null}
+
       <div className="face-viewer__legend" aria-hidden="true">
         Drag to rotate · Scroll to zoom · Right-drag to pan
       </div>

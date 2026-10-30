@@ -13,8 +13,8 @@ VoiceSurg 3D is a highly interactive, voice-controlled 3D surgical planning simu
 - **Interactive 3D Engine:** Built with Three.js and React Three Fiber, always recomputed from an immutable baseline (no drift). The head is a procedurally sculpted face (jaw, forehead, nose, lips, chin, brow) with anatomy meshes for eyes, brows and ears.
 - **Two Operating Modes:** **Live Simulation** (manipulation-first: face + sliders + change log) and **Consultation** (the full instruction → review → confirm workflow with timeline and scenarios). Switching modes preserves the current work.
 - **Reference Portraits:** Compare the 3D face against bundled portraits or a locally uploaded image, side by side. All reference images stay on-device — nothing is uploaded.
-- **In-Memory Consultation Workflow:** A temporary session tracks a transcript, a reviewable proposal state machine, an event timeline, and named scenarios.
-- **On-Device History:** Optionally archive the current consultation to IndexedDB so it survives a reload, then restore or delete it later. Stored only on this device — no cloud, no patient data.
+- **In-Memory Consultation Workflow:** A live session tracks a transcript, a reviewable proposal state machine, an event timeline, and named scenarios.
+- **Previous Consultations in SQLite:** Every consultation is archived to a local SQLite database (`backend/app/data/voicesurg.db`) — explicit archive, automatic save on end/new, and a debounced save while working. The **Previous consultations** panel lists past sessions, shows their summary, and restores the full narrative and simulation state. IndexedDB remains an offline cache/fallback. Stored only on this machine — no cloud, no patient photos.
 - **Patient-Specific Face Reconstruction:** Upload front, profile and three-quarter photographs and the app fits a shared 3D shape to them with a real pretrained model (MediaPipe Face Landmarker, 478 landmarks, on-device) against a canonical face mesh, transfers the shape onto the simulation head and shows a reviewable 3D preview before you accept it. On accept, the photographs are also projected onto the deformed mesh through the fitted camera poses, so the simulation head carries the patient's own skin, eyes, brows, lips and hair colour. Dark or small photographs are recovered with an auto-levels/upscale retry before detection. Photos never leave the device and are only visible behind the **View / Change Photos** button. See [`docs/MULTIVIEW_FACE_RECONSTRUCTION_REPORT.md`](docs/MULTIVIEW_FACE_RECONSTRUCTION_REPORT.md).
 - **Change-Set Review & History:** Apply a parsed command as a full change set (or consciously apply only the valid subset); undo any entry cleanly by recomputing the historical state stack.
 - **Compare & Summarize:** Compare the original, the current state, and any saved scenario side by side (with a parameter-difference table) and export a Markdown consultation summary.
@@ -37,6 +37,7 @@ See [`docs/FINAL_VERIFICATION_REPORT.md`](docs/FINAL_VERIFICATION_REPORT.md) for
 - **Framework:** Python + FastAPI
 - **LLM Integration:** Google GenAI API (`gemini-2.5-flash`)
 - **Data Validation:** Pydantic (Strict Schema Enforcement)
+- **Consultation Archive:** Local SQLite (`sqlite3`, file at `backend/app/data/voicesurg.db`)
 - **Environment:** Dedicated `.venv`
 
 ---
@@ -87,7 +88,7 @@ cd backend
 # Frontend
 cd frontend
 npm run fixtures          # regenerate the synthetic test photographs
-npm test                  # 25 files / 234 tests
+npm test                  # 28 files / 244 tests
 npx tsc --noEmit          # type check
 npm run build             # production build
 
@@ -123,7 +124,8 @@ Full details, including how to use the photo workflow, are in [`docs/MULTIVIEW_F
 - The patient skin texture is a projection of the photographs through the fitted camera poses, so it carries their baked lighting, is limited by their resolution, and fills unseen areas (scalp, back of the head) with sampled skin/hair colours rather than reconstructed detail.
 - The five supported regions are smooth geometric deformations of that stylized surface (for example, lip "fullness" is a radial plump and chin height scales about a fixed pivot) — not soft-tissue or osteotomy models.
 - Parameter units are illustrative (a 150 mm facial-width reference); bounds are prototype interaction limits, not clinical guidance.
-- The consultation session is **in-memory and temporary** — it is lost on reload and is not a clinical record, audit trail, nor a prediction of outcomes.
+- The working consultation is edited **in memory**, but it is auto-saved to the local SQLite archive and can be restored from **Previous consultations**. The archive is a prototype convenience store, not a clinical record, audit trail, nor a prediction of outcomes.
+- The SQLite file lives on the same machine as the backend. It contains structured session data and summaries only, never uploaded photographs; protect it like any other local patient-data file.
 - Web Speech API support depends on your specific browser (Chrome / Edge recommended; some Firefox versions require enabling it manually).
 - The bundled face detector only recognises faces turned at most about 50° towards the camera, so a true 90° profile photograph is reported as "No face detected"; the reconstruction then runs with fewer views and states the reduced accuracy. Low-exposure or small photographs are retried with auto-levels and upscaling, so darkness alone is usually not a reason to reject a photo.
 - This is a localized MVP designed strictly for simulation demos without external database persistence.

@@ -51,12 +51,14 @@ import { isTerminalProposal } from "./scene/session";
 import { descriptorFor } from "./lib/params";
 import { formatParameter, formatTarget, formatUnit } from "./lib/format";
 import {
-  clearArchivedConsultations,
-  deleteArchivedConsultation,
-  listArchivedConsultations,
-  saveArchivedConsultation,
-} from "./lib/historyStore";
+  clearConsultationArchive,
+  deleteConsultationRecord,
+  loadConsultationArchive,
+  persistConsultation,
+} from "./lib/consultationRepository";
+import type { ConsultationStorage } from "./lib/consultationRepository";
 import type { ArchivedConsultation } from "./lib/historyStore";
+import type { ConsultationSession } from "./scene/session/types";
 import { useFacePersonalization } from "./hooks/useFacePersonalization";
 import { useLiveSimulation } from "./hooks/useLiveSimulation";
 import { LiveSimulationPanel } from "./components/LiveSimulationPanel";
@@ -120,6 +122,7 @@ function App() {
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
   const [mode, setMode] = useState<WorkspaceMode>("consultation");
   const [archived, setArchived] = useState<ArchivedConsultation[]>([]);
+  const [archiveStorage, setArchiveStorage] = useState<ConsultationStorage>("local");
 
   const personalization = useFacePersonalization();
 
@@ -153,6 +156,8 @@ function App() {
   const seqRef = useRef(0);
   const reqRef = useRef(0);
   const appliedRef = useRef<Set<string>>(new Set());
+  /** Last snapshot persisted by the automatic archive effect. */
+  const autoArchiveSignatureRef = useRef("");
 
   // Latest-value refs so async continuations and handlers never read stale data.
   const sessionRef = useRef(session);
@@ -217,15 +222,87 @@ function App() {
 
   const refreshArchived = useCallback(async () => {
     try {
-      setArchived(await listArchivedConsultations());
+      const archive = await loadConsultationArchive();
+      setArchived(archive.entries);
+      setArchiveStorage(archive.storage);
     } catch {
       setArchived([]);
+      setArchiveStorage("local");
     }
   }, []);
 
   useEffect(() => {
     void refreshArchived();
   }, [refreshArchived]);
+
+  /**
+   * Build the durable snapshot for one consultation. The summary is generated
+   * from the same report path as the downloadable Markdown so the database and
+   * the export never disagree. Photographs are intentionally excluded.
+   */
+  const buildArchiveRecord = useCallback(
+    (source: ConsultationSession): ArchivedConsultation => {
+      const currentHistory = historyRef.current;
+      const currentState = applyAllCommands(currentHistory);
+      let summary = "";
+      try {
+        summary = buildConsultationReport({
+          session: source,
+          history: currentHistory,
+          modelState: currentState,
+          finalScenarioId: selectedScenarioId,
+        });
+      } catch {
+        summary = "";
+      }
+      return {
+        id: source.id,
+        label: `Consultation ${new Date(source.startedAt).toLocaleString([], {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })}`,
+        savedAt: Date.now(),
+        startedAt: source.startedAt,
+        endedAt: source.endedAt,
+        status: source.status,
+        changeCount: currentHistory.length,
+        scenarioCount: source.scenarios.length,
+        modelState: currentState,
+        summary,
+        personalization: personalization.personalization,
+        liveEvents,
+        transcript: source.transcript,
+        proposals: source.proposals,
+        events: source.events,
+        scenarios: source.scenarios,
+      };
+    },
+    [liveEvents, personalization.personalization, selectedScenarioId],
+  );
+
+  const saveArchive = useCallback(
+    async (record: ArchivedConsultation, announce: boolean) => {
+      const result = await persistConsultation(record);
+      // Update the panel immediately; only an explicit archive re-reads the
+      // whole database so automatic saves stay cheap.
+      setArchived((prev) =>
+        [record, ...prev.filter((entry) => entry.id !== record.id)].sort(
+          (a, b) => b.savedAt - a.savedAt,
+        ),
+      );
+      setArchiveStorage(result.storage);
+      if (announce) {
+        setNotice(
+          result.storage === "database"
+            ? "Consultation saved to the local SQLite database."
+            : "Database unavailable — consultation saved in this browser instead.",
+        );
+        await refreshArchived();
+      }
+      return result;
+    },
+    [refreshArchived],
+  );
 
   const parseText = useCallback(async (text: string, source: InputSource) => {
     const sid = sessionRef.current.id;
@@ -535,9 +612,63 @@ function App() {
   };
 
   const hasWork =
-    history.length > 0 || session.scenarios.length > 0 || session.transcript.length > 0;
+    history.length > 0 ||
+    session.scenarios.length > 0 ||
+    session.transcript.length > 0 ||
+    liveEvents.length > 0;
+
+  // Keep the SQLite archive warm while a consultation is being used. Debounced
+  // updates make the current session recoverable after a reload without
+  // writing on every keystroke or vertex update. Explicit archive / end still
+  // write immediately.
+  useEffect(() => {
+    if (!hasWork) return;
+    const signature = JSON.stringify({
+      history,
+      scenarios: session.scenarios,
+      transcript: session.transcript,
+      proposals: session.proposals,
+      events: session.events,
+      status: session.status,
+      liveEvents: liveEvents.length,
+      selectedScenarioId,
+      personalization: personalization.personalization,
+    });
+    if (signature === autoArchiveSignatureRef.current) return;
+    const timer = window.setTimeout(() => {
+      autoArchiveSignatureRef.current = signature;
+      void saveArchive(buildArchiveRecord(sessionRef.current), false);
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [
+    buildArchiveRecord,
+    hasWork,
+    history,
+    liveEvents.length,
+    personalization.personalization,
+    saveArchive,
+    selectedScenarioId,
+    session.events,
+    session.proposals,
+    session.scenarios,
+    session.status,
+    session.transcript,
+  ]);
 
   const doNewConsultation = () => {
+    // Persist the consultation that is about to be discarded. This is what
+    // makes "all consultations" recoverable from the SQLite archive even when
+    // the surgeon did not press Archive explicitly.
+    const current = sessionRef.current;
+    const hasArchivableWork =
+      historyRef.current.length > 0 ||
+      current.scenarios.length > 0 ||
+      current.transcript.length > 0 ||
+      liveEvents.length > 0;
+    if (hasArchivableWork) {
+      void saveArchive(buildArchiveRecord(endSession(current)), false);
+    }
+
     stopListeningIfActive();
     live.stop();
     reqRef.current += 1; // Invalidate any in-flight parse.
@@ -596,17 +727,28 @@ function App() {
   const handleEndConsultation = () => {
     stopListeningIfActive();
     live.stop();
-    setSession((prev) => {
-      const id = activeProposalIdRef.current;
-      const proposal = id ? prev.proposals.find((p) => p.id === id) ?? null : null;
-      const base =
-        proposal && !isTerminalProposal(proposal.status)
-          ? resolveProposal(prev, proposal.id, "cancelled")
-          : prev;
-      return endSession(base);
-    });
+
+    const current = sessionRef.current;
+    const id = activeProposalIdRef.current;
+    const proposal = id ? current.proposals.find((p) => p.id === id) ?? null : null;
+    const base =
+      proposal && !isTerminalProposal(proposal.status)
+        ? resolveProposal(current, proposal.id, "cancelled")
+        : current;
+    const ended = endSession(base);
+    setSession(ended);
     setActiveProposalId(null);
     setEditingIndex(null);
+
+    // Ending a consultation automatically stores it in the archive.
+    if (
+      historyRef.current.length > 0 ||
+      ended.scenarios.length > 0 ||
+      ended.transcript.length > 0 ||
+      liveEvents.length > 0
+    ) {
+      void saveArchive(buildArchiveRecord(ended), false);
+    }
   };
 
   const handleManualChange = (key: ParamKey, value: number) => {
@@ -699,44 +841,18 @@ function App() {
   };
 
   const handleArchiveConsultation = async () => {
-    const current = sessionRef.current;
-    let summary = "";
-    try {
-      summary = buildConsultationReport({
-        session: current,
-        history: historyRef.current,
-        modelState,
-        finalScenarioId: selectedScenarioId,
-      });
-    } catch {
-      summary = "";
-    }
-    const record: ArchivedConsultation = {
-      id: `archive-${Date.now()}`,
-      label: `Consultation ${new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`,
-      savedAt: Date.now(),
-      startedAt: current.startedAt,
-      status: current.status,
-      changeCount: historyRef.current.length,
-      scenarioCount: current.scenarios.length,
-      modelState,
-      summary,
-      personalization: personalization.personalization,
-      liveEvents,
-    };
-    await saveArchivedConsultation(record);
-    await refreshArchived();
+    const record = buildArchiveRecord(sessionRef.current);
+    const result = await saveArchive(record, true);
     setSession((prev) =>
       appendEvent(prev, {
         type: "consultation_archived",
         label: "Consultation archived",
-        detail: "Saved to this browser.",
+        detail:
+          result.storage === "database"
+            ? "Saved to the local SQLite database."
+            : "Saved to the browser fallback (database unavailable).",
       }),
     );
-    setNotice("Consultation archived on this device.");
   };
 
   const handleRestoreArchived = (id: string) => {
@@ -748,23 +864,58 @@ function App() {
       personalization.applyPersonalization(record.personalization);
     }
     setSelectedScenarioId(null);
-    setSession((prev) =>
-      appendEvent(prev, {
-        type: "consultation_restored",
-        label: "Consultation restored",
-        detail: record.label,
-      }),
-    );
+    setActiveProposalId(null);
+    setEditingIndex(null);
+
+    // Restore the full narrative when the record carries it. Older archives
+    // only contain the model state, so they keep the current session shell.
+    const hasNarrative =
+      record.transcript !== undefined ||
+      record.events !== undefined ||
+      record.scenarios !== undefined ||
+      record.proposals !== undefined;
+
+    if (hasNarrative) {
+      const restored: ConsultationSession = {
+        // Keep the archive id so continuing a restored consultation updates the
+        // existing record instead of creating a duplicate.
+        id: record.id,
+        startedAt: record.startedAt,
+        endedAt: null,
+        status: "active",
+        transcript: record.transcript ?? [],
+        proposals: record.proposals ?? [],
+        events: record.events ?? [],
+        scenarios: record.scenarios ?? [],
+      };
+      setSession(
+        appendEvent(restored, {
+          type: "consultation_restored",
+          label: "Consultation restored",
+          detail: record.label,
+        }),
+      );
+    } else {
+      setSession((prev) =>
+        appendEvent(prev, {
+          type: "consultation_restored",
+          label: "Consultation restored",
+          detail: record.label,
+        }),
+      );
+    }
     setNotice(`Restored ${record.label}.`);
   };
 
   const handleDeleteArchived = async (id: string) => {
-    await deleteArchivedConsultation(id);
+    const storage = await deleteConsultationRecord(id);
+    setArchiveStorage(storage);
     await refreshArchived();
   };
 
   const handleClearArchived = async () => {
-    await clearArchivedConsultations();
+    const storage = await clearConsultationArchive();
+    setArchiveStorage(storage);
     await refreshArchived();
   };
 
@@ -925,10 +1076,12 @@ function App() {
                 <ConsultationHistoryPanel
                   entries={archived}
                   canArchive={hasWork}
+                  storage={archiveStorage}
                   onArchive={handleArchiveConsultation}
                   onRestore={handleRestoreArchived}
                   onDelete={handleDeleteArchived}
                   onClear={handleClearArchived}
+                  onRefresh={() => void refreshArchived()}
                 />
               </>
             ) : null}
@@ -998,9 +1151,9 @@ function App() {
         onCancel={() => setDialog(null)}
         onConfirm={doNewConsultation}
       >
-        This consultation is held only in memory. Starting a new one discards the
-        current transcript, change history and saved scenarios. This cannot be
-        undone.
+        The current consultation is saved to the local SQLite archive first. Starting a new one
+        then clears the in-memory transcript, change history and saved scenarios from the
+        workspace. You can restore the archived copy from “Previous consultations”.
       </ConfirmDialog>
 
       <ConfirmDialog

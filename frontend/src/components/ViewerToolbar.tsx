@@ -73,9 +73,10 @@ export function ViewerToolbar({
         className={`tool-toggle ${heatmapMode ? "is-active" : ""}`}
         aria-pressed={heatmapMode}
         onClick={onToggleHeatmap}
+        title="Colour the face by how far each vertex moved from the baseline"
       >
         <Icon name="heat" size={16} />
-        Displacement
+        Heatmap
       </button>
 
       <button

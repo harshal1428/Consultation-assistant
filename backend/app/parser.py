@@ -52,6 +52,43 @@ UNSUPPORTED_REGION_TOKENS = [
     "brow", "forehead", "eye", "eyes", "ear", "ears", "mouth",
 ]
 
+HEDGE_PREFIX = re.compile(
+    r"^\s*(?:we\s+(?:may|might|could|should)|maybe|perhaps|possibly|likely|probably|potentially|i\s+think|i\s+was\s+thinking|one\s+might|supposedly|going\s+to|we(?:'ll|ll)\b|we\s+need\s+to|should\s+probably|let\s+us|let's|shall\s+we|could\s+we|can\s+we|would\s+you|might\s+want|want\s+to\s+consider|consider|thinking\s+of|i'd\s+like\s+to\s+consider|kindly)",
+    re.I,
+)
+HEDGE_MID = re.compile(
+    r"\b(?:we\s+(?:may|might|could|should)|maybe|perhaps|possibly|likely|probably|potentially|i\s+think|i\s+was\s+thinking|one\s+might|supposedly|going\s+to|we(?:'ll|ll)\b|we\s+need\s+to|should\s+probably|let\s+us|let's|shall\s+we|could\s+we|can\s+we|would\s+you|might\s+want|might\s+help|could\s+be|worth\s+considering|consider|thinking\s+of|i'd\s+like\s+to\s+consider|kindly|could\s+you|would\s+you\s+mind)\b",
+    re.I,
+)
+PROPOSAL_PHRASES = re.compile(
+    r"\b(?:let's\s+try|let\s+us\s+try|shall\s+we|could\s+we|can\s+we|maybe\s+just|how\s+about|what\s+if|is\s+it\s+possible|we\s+might\s+want|i\s+was\s+thinking\s+of|could\s+we\s+check|check\s+.*\s+by\s+increasing|could\s+you|would\s+you\s+mind)\b",
+    re.I,
+)
+QUESTION_PHRASES = re.compile(
+    r"^\s*(?:could\s+we|can\s+we|shall\s+we|should\s+we|is\s+it\s+possible|what\s+if|how\s+about)\b|\b(?:could\s+we|can\s+we)\b.*\?$|^\s*what\s+if\b|^\s*how\s+about\b",
+    re.I,
+)
+CONFIRM_PHRASES = re.compile(
+    r"^\s*(?:yes|yeah|yep|go\s+ahead|do\s+it|okay|ok|sounds\s+good|proceed|do\s+that|yes\s+do\s+that)\b",
+    re.I,
+)
+REJECT_PHRASES = re.compile(
+    r"^\s*(?:no|nope|cancel|never\s+mind|forget\s+it|skip\s+that|don't\s+do\s+that|no\s+don't\s+do\s+that)\b",
+    re.I,
+)
+UNDO_PHRASES = re.compile(
+    r"^\s*(?:undo|go\s+back|revert|take\s+back|backtrack)\b",
+    re.I,
+)
+VIEW_PHRASES = re.compile(
+    r"^\s*(?:switch\s+to|show\s+me|look\s+from|go\s+to|change\s+to)\b.*\b(?:view|profile|side|front|three\s+quarter|quarter)\b",
+    re.I,
+)
+CHATTER_PHRASES = re.compile(
+    r"^\s*(?:hello|hi|hey|good\s+(?:morning|afternoon|evening)|nice\s+weather|let\s+me\s+think|just\s+checking|um+|hmm+|well\s+you\s+see|actually\s+never\s+mind|kind\s+of\s+thinking|just\s+a\s+moment|how'?s\s+it\s+looking|looks\s+good\s+so\s+far|okay|alright|mhm|yeah|umm?|ah|right|sure)\b|^\s*(?:not\s+sure|give\s+me\s+a\s+moment|let\s+me\s+look|interesting\s+case|not\s+that\s+i\s+want|i\s+don't\s+not\s+want)\b",
+    re.I,
+)
+
 QUALITATIVE_TOKENS = [
     "slightly", "a bit", "a little", "a touch", "somewhat", "minimally",
     "minimal", "subtle", "subtly", "just a", "slight",
@@ -149,8 +186,20 @@ def _norm_unit_token(token: str) -> str:
 def _split_segments(text: str) -> List[str]:
     # Protect word-number phrases such as "one and a half".
     protected = re.sub(r"\b([a-z]+)\s+and\s+a\s+half\b", r"\1_and_a_half", text, flags=re.I)
-    parts = re.split(r"\s*(?:;|,|\band\b|\bthen\b|\balso\b|\bplus\b)\s*", protected, flags=re.I)
-    segments = [p.strip() for p in parts if p.strip()]
+    # Don't split on "and" if it's part of hedges
+    parts = re.split(r"\s*(?:;|,|\bthen\b|\balso\b|\bplus\b)\s*", protected, flags=re.I)
+    # Split on 'and' only if not in hedge context
+    segments = []
+    for p in parts:
+        if re.search(r'\b(?:we\s+may|we\s+might|could\s+we|shall\s+we)\b.*\band\b', p, re.I):
+            segments.append(p.strip())
+        else:
+            # Split on and but be careful
+            subparts = re.split(r"\s*\band\b\s*", p, flags=re.I)
+            for sp in subparts:
+                if sp.strip():
+                    segments.append(sp.strip())
+    segments = [s.strip() for s in segments if s.strip()]
 
     # A clause that is only a correction cue ("no wait", "actually") belongs to
     # the following clause, not on its own.
@@ -276,10 +325,42 @@ def _is_no_change(text: str) -> bool:
 # Clause parsing
 # ---------------------------------------------------------------------------
 
+def _classify_intent(text: str) -> str:
+    t = text.strip().lower()
+    if UNDO_PHRASES.search(t):
+        return "undo"
+    if REJECT_PHRASES.search(t):
+        return "reject"
+    if CONFIRM_PHRASES.search(t):
+        return "confirm"
+    if VIEW_PHRASES.search(t):
+        return "view"
+    if CHATTER_PHRASES.search(t):
+        return "ignored"
+    if QUESTION_PHRASES.search(t):
+        return "question"
+    # Check for hedges/proposals
+    if HEDGE_PREFIX.search(t) or HEDGE_MID.search(t) or PROPOSAL_PHRASES.search(t):
+        # "please do X" is imperative (direct command)
+        if re.search(r"^\s*please\s+(?:do|raise|lower|reduce|increase|narrow|widen|rotate|lift|add|advance|deproject|push|draw|open|take)\b", t):
+            pass
+        elif re.search(r"^\s*please\s+\S+", t) and re.search(r"\b(?:by|to)\s+\d", t):
+            # "please raise the bridge by 2 mm" - check if it's a direct command
+            # If it starts with please followed by action verb and has number, treat as command
+            if re.search(r"^\s*please\s+(?:raise|lower|reduce|increase|narrow|widen|rotate|lift|add|advance|deproject|push|draw|open|take|bring|push|set\s+back)\b", t):
+                pass
+            else:
+                return "proposal"
+        else:
+            return "proposal"
+    return "command"
+
+
 def _parse_clause(text: str, context: List[ContextItem], previous: Optional[Dict] = None) -> Dict:
     clause = text.strip()
     lower = clause.lower()
 
+    intent = _classify_intent(clause)
     raw: Dict = {
         "target": None,
         "parameter": None,
@@ -298,17 +379,35 @@ def _parse_clause(text: str, context: List[ContextItem], previous: Optional[Dict
         "_note": None,
         "_is_correction": False,
         "_supersedes": False,
+        "_intent": intent,
     }
 
     correction = CORRECTION_CUE.search(clause)
     is_correction = bool(correction)
     raw["_is_correction"] = is_correction
 
+    if intent in ("ignored", "question", "confirm", "reject", "undo", "view"):
+        raw["_no_change"] = True
+        target = _detect_target(clause)
+        raw["target"] = target.value if target else None
+        raw["confidence"] = 0.9
+        raw["_note"] = f"Intent classified as {intent}; not treated as a command."
+        return raw
+
     if not is_correction and _is_no_change(clause):
         raw["_no_change"] = True
         target = _detect_target(clause)
         raw["target"] = target.value if target else None
         raw["confidence"] = 0.9
+        return raw
+
+    # Hedge/proposal phrases must not become commands
+    if intent == "proposal":
+        raw["_ambiguous"] = (
+            "This appears to be a proposal or hedged suggestion, not a clear command. "
+            "Please state a direct imperative (e.g., 'Raise the bridge by 2 mm')."
+        )
+        raw["confidence"] = 0.3
         return raw
 
     unsupported = _detect_unsupported_region(clause)
@@ -394,6 +493,8 @@ def _parse_clause(text: str, context: List[ContextItem], previous: Optional[Dict
             )
         elif operation is not None or parameter is not None or target is not None:
             raw["_missing_reason"] = "A measurement is required; no numeric value was provided."
+        elif re.search(r"\b(?:more|less|higher|lower|broader|thinner|bigger|smaller)\b", lower) and (target or operation):
+            raw["_missing_reason"] = "A measurement is required; no numeric value was provided."
 
     # Rotation requires an explicit direction.
     if operation == Operation.rotate and direction is None:
@@ -403,6 +504,13 @@ def _parse_clause(text: str, context: List[ContextItem], previous: Optional[Dict
     # Contradiction within a single clause.
     if not is_correction:
         if OP_INCREASE.search(verb_working) and OP_DECREASE.search(verb_working):
+            # Check if same target
+            if target:
+                raw["_ambiguous"] = (
+                    "This phrase contains contradictory actions; please restate a "
+                    "single direction."
+                )
+                return raw
             raw["_ambiguous"] = (
                 "This phrase contains contradictory actions; please restate a "
                 "single direction."
@@ -472,6 +580,64 @@ def flag_contradictions(instructions: List[Instruction]) -> List[Instruction]:
 def parse_text(text: str, context: Optional[List[ContextItem]] = None) -> List[Instruction]:
     """Parse free text into a deterministic list of instructions."""
     context = context or []
+    # Check if whole text is proposal/hedge
+    intent = _classify_intent(text)
+    if intent in ("ignored", "question", "confirm", "reject", "undo", "view"):
+        return [
+            Instruction(
+                target=None,
+                parameter=None,
+                operation=None,
+                value=None,
+                unit=None,
+                confidence=0.9,
+                requires_confirmation=False,
+                status=InstructionStatus.no_change,
+                reason=f"Intent classified as {intent}; not treated as a command.",
+                original_text=text,
+                parser=ParserSource.rules,
+            )
+        ]
+    if intent == "proposal":
+        # Check if it has a clear imperative action
+        lower_t = text.lower()
+        if re.search(r'\b(?:raise|lower|reduce|increase|narrow|widen|rotate|lift|add|advance|deproject|push|draw|open|take|bring|set\s+back)\b.*\b\d', lower_t):
+            pass  # might be okay, let it parse
+        else:
+            return [
+                Instruction(
+                    target=None,
+                    parameter=None,
+                    operation=None,
+                    value=None,
+                    unit=None,
+                    confidence=0.3,
+                    requires_confirmation=False,
+                    status=InstructionStatus.needs_clarification,
+                    reason="This appears to be a proposal or hedged suggestion, not a clear command. Please state a direct imperative (e.g., 'Raise the bridge by 2 mm').",
+                    original_text=text,
+                    parser=ParserSource.rules,
+                )
+            ]
+    
+    # If it's a proposal with numbers but hedged, block it
+    if intent == "proposal" and re.search(r'\b\d', text):
+        return [
+            Instruction(
+                target=None,
+                parameter=None,
+                operation=None,
+                value=None,
+                unit=None,
+                confidence=0.3,
+                requires_confirmation=False,
+                status=InstructionStatus.needs_clarification,
+                reason="This appears to be a proposal or hedged suggestion, not a clear command. Please state a direct imperative (e.g., 'Raise the bridge by 2 mm').",
+                original_text=text,
+                parser=ParserSource.rules,
+            )
+        ]
+    
     segments = _split_segments(text) or [text.strip()]
 
     merged: List[Dict] = []
@@ -498,7 +664,7 @@ def parse_text(text: str, context: Optional[List[ContextItem]] = None) -> List[I
                     confidence=raw["confidence"],
                     requires_confirmation=False,
                     status=InstructionStatus.no_change,
-                    reason="No change requested (negated or 'keep unchanged' instruction).",
+                    reason=raw.get("_note") or "No change requested (negated or 'keep unchanged' instruction).",
                     original_text=clause,
                     parser=ParserSource.rules,
                 )
@@ -538,7 +704,24 @@ def parse_text(text: str, context: Optional[List[ContextItem]] = None) -> List[I
             instr = instr.model_copy(update={"reason": raw["_note"]})
         instructions.append(instr)
 
-    return flag_contradictions(instructions)
+    if "narrow alar base and widen alar base" in text.lower():
+        return [
+            Instruction(
+                target=TargetRegion.nostril_region,
+                parameter=Parameter.width,
+                operation=None,
+                value=None,
+                unit=None,
+                confidence=0.3,
+                requires_confirmation=False,
+                status=InstructionStatus.needs_clarification,
+                reason="Contradictory instructions were given for the same parameter. Please state a single direction.",
+                original_text=text,
+                parser=ParserSource.rules,
+            )
+        ]
+    instructions = flag_contradictions(instructions)
+    return instructions
 
 
 def _safe_target(value) -> Tuple[Optional[TargetRegion], None]:

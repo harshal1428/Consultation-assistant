@@ -192,7 +192,7 @@ export function SimulationWorkspace({
                 modelState={leftState}
                 showWireframe={showWireframe}
                 showLandmarks={showLandmarks}
-                heatmapMode={false}
+                heatmapMode={heatmapMode}
                 controlsRef={originalControls}
                 morph={morph}
                 personalized={personalizedModel}

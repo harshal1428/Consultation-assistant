@@ -1,0 +1,266 @@
+text,label,parameter,direction,value,unit,side,note,conversation_id,turn_index,source
+"Raise the nasal bridge by 2 mm",command,height,up,2,mm,,direct imperative,sess1,1,synthetic
+"Reduce the tip projection by 1 mm",command,projection,down,1,mm,,direct imperative,sess2,1,synthetic
+"Narrow the alar base by 1.5 mm",command,width,down,1.5,mm,,direct imperative,sess3,1,synthetic
+"Widen the jawline by 2 mm",command,width,up,2,mm,,direct imperative,sess4,1,synthetic
+"Increase chin projection by 1 mm",command,projection,up,1,mm,,direct imperative,sess5,1,synthetic
+"Rotate the tip upward by 3 degrees",command,rotation,up,3,degrees,,direct imperative,sess6,1,synthetic
+"Lower the bridge by 2 mm",command,height,down,2,mm,,direct imperative,sess7,1,synthetic
+"Reduce dorsal hump by 1.5 mm",command,height,down,1.5,mm,,direct imperative,sess8,1,synthetic
+"Increase tip projection by 1 mm",command,projection,up,1,mm,,direct imperative,sess9,1,synthetic
+"Widen the nostrils by 1 mm",command,width,up,1,mm,,direct imperative,sess10,1,synthetic
+"Raise the chin by 2 mm",command,height,up,2,mm,,direct imperative,sess11,1,synthetic
+"Decrease cheek fullness by 1 mm",command,fullness,down,1,mm,,direct imperative,sess12,1,synthetic
+"Increase upper lip projection by 1 mm",command,projection,up,1,mm,,direct imperative,sess13,1,synthetic
+"Reduce lower lip fullness by 0.5 mm",command,fullness,down,0.5,mm,,direct imperative,sess14,1,synthetic
+"Sharpen jawline definition by 1 mm",command,definition,up,1,mm,,direct imperative,sess15,1,synthetic
+"Lift the tip by two millimeters",command,height,up,2,mm,,number word,sess16,1,synthetic
+"Reduce bridge by three mil",command,height,down,3,mm,,Indian-English mil,sess17,1,synthetic
+"Increase tip by two and a half mm",command,height,up,2.5,mm,,number word phrase,sess18,1,synthetic
+"Raise bridge by 2 m m",command,height,up,2,mm,,spaced units,sess19,1,synthetic
+"Narrow alar base by one and a half mm",command,width,down,1.5,mm,,number word,sess20,1,synthetic
+"We may reduce the bridge by 2 mm",proposal,height,down,2,mm,,hedged,sess21,1,synthetic
+"We could lower the tip a bit",proposal,height,down,,,,"hedged qualitative",sess22,1,synthetic
+"Maybe we should narrow the alar base",proposal,width,down,,,,"hedged no number",sess23,1,synthetic
+"Perhaps reduce the hump by 1 mm",proposal,height,down,1,mm,,hedged,sess24,1,synthetic
+"Let's try raising the bridge slightly",proposal,height,up,,,,"lets try",sess25,1,synthetic
+"Shall we reduce the tip projection",proposal,projection,down,,,,"shall we",sess26,1,synthetic
+"Could we check alar width by increasing 2 mm",proposal,width,up,2,mm,,proposal not command,sess27,1,synthetic
+"We might want to refine the tip",proposal,,up,,,,"vague proposal",sess28,1,synthetic
+"I was thinking of narrowing the nostrils",proposal,width,down,,,,"thinking of",sess29,1,synthetic
+"Perhaps we can do something about the bridge",proposal,,, ,,,hedged vague,sess30,1,synthetic
+"Could we take a look at the tip",question,,, ,,,question,sess31,1,synthetic
+"What if we reduced the bridge",question,height,down,,,,"hypothetical question",sess32,1,synthetic
+"Should we narrow the alar base",question,width,down,,,,"question",sess33,1,synthetic
+"Is it possible to raise the tip",question,height,up,,,,"question",sess34,1,synthetic
+"Can we try to refine the chin",question,,up,,,,"question",sess35,1,synthetic
+"How about reducing the hump",question,height,down,,,,"casual question",sess36,1,synthetic
+"Yes do that",confirm,,, ,,,confirm after proposal,sess21,2,synthetic
+"Go ahead",confirm,,, ,,,confirm,sess22,2,synthetic
+"Do it",confirm,,, ,,,confirm,sess23,2,synthetic
+"Okay proceed",confirm,,, ,,,confirm,sess24,2,synthetic
+"Sounds good do that",confirm,,, ,,,confirm,sess25,2,synthetic
+"No don't do that",reject,,, ,,,reject,sess26,2,synthetic
+"Cancel that",reject,,, ,,,reject,sess27,2,synthetic
+"Never mind",reject,,, ,,,reject,sess28,2,synthetic
+"Forget it",reject,,, ,,,reject,sess29,2,synthetic
+"Skip that",reject,,, ,,,reject,sess30,2,synthetic
+"Undo that",undo,,, ,,,undo,sess37,1,synthetic
+"Go back",undo,,, ,,,undo,sess38,1,synthetic
+"Revert the last change",undo,,, ,,,undo,sess39,1,synthetic
+"Undo the tip change",undo,,, ,,,undo,sess40,1,synthetic
+"Take back what we just did",undo,,, ,,,undo,sess41,1,synthetic
+"Switch to side view",view,,, ,,,view,sess42,1,synthetic
+"Show me the profile",view,,, ,,,view,sess43,1,synthetic
+"Look from the side",view,,, ,,,view,sess44,1,synthetic
+"Go to front view",view,,, ,,,view,sess45,1,synthetic
+"Change to three quarter view",view,,, ,,,view,sess46,1,synthetic
+"Hello how are you doing",ignored,,, ,,,chatter,sess47,1,synthetic
+"Good morning doctor",ignored,,, ,,,greeting,sess48,1,synthetic
+"Nice weather today",ignored,,, ,,,small talk,sess49,1,synthetic
+"Let me think about it",ignored,,, ,,,chatter,sess50,1,synthetic
+"Just checking something",ignored,,, ,,,chatter,sess51,1,synthetic
+"Um hmm",ignored,,, ,,,filler,sess52,1,synthetic
+"Well you see",ignored,,, ,,,filler,sess53,1,synthetic
+"Actually never mind that",ignored,,, ,,,filler,sess54,1,synthetic
+"Kind of thinking aloud",ignored,,, ,,,chatter,sess55,1,synthetic
+"Just a moment please",ignored,,, ,,,chatter,sess56,1,synthetic
+"Raise the bridge by 2 mm and narrow the alar base by 1 mm",command,height;width,up;down,2;1,mm;mm,,multi command,sess57,1,synthetic
+"Reduce tip projection by 1 mm and rotate tip upward by 2 degrees",command,projection;rotation,down;up,1;2,mm;degrees,,multi command,sess58,1,synthetic
+"Widen jawline by 1 mm and advance chin by 0.5 mm",command,width;projection,up;up,1;0.5,mm;mm,,multi command,sess59,1,synthetic
+"Raise bridge by 1.5 mm then reduce tip by 0.5 mm",command,height;projection,up;down,1.5;0.5,mm;mm,,sequential,sess60,1,synthetic
+"Increase tip projection by 1 mm and decrease bridge height by 1 mm",command,projection;height,up;down,1;1,mm;mm,,multi command,sess61,1,synthetic
+"Do not reduce the bridge",ignored,height,down,,,,"negation explicit",sess62,1,synthetic
+"Don't touch the tip",ignored,,, ,,,negation,sess63,1,synthetic
+"Never narrow the alar base",ignored,width,down,,,,"negation",sess64,1,synthetic
+"Keep the bridge unchanged",ignored,height,,,,"","keep unchanged",sess65,1,synthetic
+"Leave the tip as is",ignored,,, ,,,leave as is,sess66,1,synthetic
+"Reduce the forehead by 2 mm",ignored,,, ,,,unsupported region,sess67,1,synthetic
+"Make the eyes smaller",ignored,,, ,,,unsupported,sess68,1,synthetic
+"Lift the ear lobe",ignored,,, ,,,unsupported,sess69,1,synthetic
+"Increase mouth width",ignored,,, ,,,unsupported region,sess70,1,synthetic
+"Reduce eyebrow height",ignored,,, ,,,unsupported,sess71,1,synthetic
+"Lower the tip slightly",proposal,height,down,,,,"qualitative",sess72,1,synthetic
+"Raise the bridge a bit",proposal,height,up,,,,"qualitative",sess73,1,synthetic
+"Narrow the alar base a little",proposal,width,down,,,,"qualitative",sess74,1,synthetic
+"Refine the tip just a touch",proposal,,, ,,,qualitative vague,sess75,1,synthetic
+"Make the chin a bit more prominent",proposal,projection,up,,,,"qualitative",sess76,1,synthetic
+"Increase lip projection by 2 mm",ignored,projection,up,2,mm,,bare lip ambiguous,sess77,1,synthetic
+"Change the lip",ignored,,, ,,,ambiguous,sess78,1,synthetic
+"Work on the lips",ignored,,, ,,,ambiguous,sess79,1,synthetic
+"Do something with the lip",ignored,,, ,,,ambiguous,sess80,1,synthetic
+"Adjust lip shape",ignored,,, ,,,ambiguous,sess81,1,synthetic
+"Reduce bridge by 100 mm",ignored,height,down,100,mm,,out of range,sess82,1,synthetic
+"Increase tip projection by 50 mm",ignored,projection,up,50,mm,,out of range,sess83,1,synthetic
+"Raise chin by 25 mm",ignored,height,up,25,mm,,out of range,sess84,1,synthetic
+"Widen jaw by 30 mm",ignored,width,up,30,mm,,out of range,sess85,1,synthetic
+"Narrow alar base by 20 mm",ignored,width,down,20,mm,,out of range,sess86,1,synthetic
+"Rotate the tip by 5 degrees",ignored,rotation,up,5,degrees,,rotation no direction,sess87,1,synthetic
+"Rotate the bridge by 3 degrees",ignored,rotation,up,3,degrees,,rotation no direction,sess88,1,synthetic
+"Turn the tip",ignored,,, ,,,rotation no direction,sess89,1,synthetic
+"Angle the chin",ignored,,, ,,,rotation no direction,sess90,1,synthetic
+"Rotate it",ignored,,, ,,,rotation no direction,sess91,1,synthetic
+"Set the bridge width to 2 mm",ignored,width,up,2,mm,,no direction,sess92,1,synthetic
+"Make the tip 3 mm",ignored,,, ,,,no direction/syntax,sess93,1,synthetic
+"Adjust bridge to 1 mm",ignored,,, ,,,ambiguous,sess94,1,synthetic
+"Change tip by 2 mm",ignored,,, ,,,ambiguous,sess95,1,synthetic
+"Modify chin",ignored,,, ,,,no value,sess96,1,synthetic
+"Increase the bridge by 2 mm and decrease the bridge by 1 mm",ignored,height,up;down,2;1,mm;mm,,contradiction,sess97,1,synthetic
+"Raise tip by 1 mm and lower tip by 2 mm",ignored,height,up;down,1;2,mm;mm,,contradiction,sess98,1,synthetic
+"Narrow alar base and widen alar base by 1 mm",ignored,width,down;up,;1,mm,,contradiction,sess99,1,synthetic
+"Increase and decrease chin projection",ignored,projection,up;down,,,,"contradiction",sess100,1,synthetic
+"Reduce bridge by 1 mm actually increase it by 2 mm",command,height,up,2,mm,,correction,sess101,1,synthetic
+"Raise tip by 1 mm, no wait lower it by 0.5 mm",command,height,down,0.5,mm,,correction,sess102,1,synthetic
+"Narrow alar base by 1 mm actually widen it by 0.5 mm",command,width,up,0.5,mm,,correction,sess103,1,synthetic
+"Reduce bridge by 2 mm instead make it 1 mm",command,height,down,1,mm,,correction,sess104,1,synthetic
+"I mean raise the tip by 1.5 mm",command,height,up,1.5,mm,,correction,sess105,1,synthetic
+"Reduce it by 1 mm",command,height,down,1,mm,,pronoun with context,sess106,1,synthetic
+"Raise that by 0.5 mm",command,height,up,0.5,mm,,pronoun,sess107,1,synthetic
+"Narrow it by 1 mm",command,width,down,1,mm,,pronoun,sess108,1,synthetic
+"Widen it by 0.5 mm",command,width,up,0.5,mm,,pronoun,sess109,1,synthetic
+"Lower it by 1 mm",command,height,down,1,mm,,pronoun,sess110,1,synthetic
+"Reduce the bridge by 1 inch",ignored,height,down,1,inch,,inches unsupported,sess111,1,synthetic
+"Increase tip by 0.5 inches",ignored,height,up,0.5,inch,,inches unsupported,sess112,1,synthetic
+"Raise bridge by 2 inches",ignored,height,up,2,inch,,inches unsupported,sess113,1,synthetic
+"Make my nose better",ignored,,, ,,,gibberish vague,sess114,1,synthetic
+"Do something nice",ignored,,, ,,,gibberish,sess115,1,synthetic
+"Make it look good",ignored,,, ,,,gibberish,sess116,1,synthetic
+"Fix it up",ignored,,, ,,,gibberish,sess117,1,synthetic
+"Improve the appearance",ignored,,, ,,,gibberish,sess118,1,synthetic
+"Raise the nasal bridge by 2 mm",command,height,up,2,mm,,direct,sess119,1,synthetic
+"Decrease nasal tip projection by 1 mm",command,projection,down,1,mm,,direct,sess120,1,synthetic
+"Increase nasal tip rotation by 3 degrees upward",command,rotation,up,3,degrees,,direct,sess121,1,synthetic
+"Narrow the nostril region by 1 mm",command,width,down,1,mm,,direct,sess122,1,synthetic
+"Advance the chin by 1.5 mm",command,projection,up,1.5,mm,,direct,sess123,1,synthetic
+"Reduce the dorsal hump by 1 mm",command,height,down,1,mm,,direct,sess124,1,synthetic
+"We may want to reduce the dorsal hump by 1 mm",proposal,height,down,1,mm,,hedged,sess125,1,synthetic
+"Could we possibly narrow the alar base",proposal,width,down,,,,"hedged question",sess126,1,synthetic
+"Maybe just a tiny bit of reduction to the bridge",proposal,height,down,,,,"hedged vague",sess127,1,synthetic
+"I'd like to consider raising the tip by 1 mm",proposal,height,up,1,mm,,hedged,sess128,1,synthetic
+"We should probably check the alar width first",proposal,width,,,,"hedged",sess129,1,synthetic
+"Shall we proceed with reducing the tip projection",proposal,projection,down,,,,"hedged",sess130,1,synthetic
+"Can we have a look at narrowing the bridge",proposal,width,down,,,,"hedged question",sess131,1,synthetic
+"Perhaps we might reduce the hump a little",proposal,height,down,,,,"double hedged",sess132,1,synthetic
+"Let's hold off and see",ignored,,, ,,,chatter,sess133,1,synthetic
+"Not sure about that",ignored,,, ,,,chatter,sess134,1,synthetic
+"Give me a moment",ignored,,, ,,,chatter,sess135,1,synthetic
+"Let me look at it again",ignored,,, ,,,chatter,sess136,1,synthetic
+"Interesting case",ignored,,, ,,,chatter,sess137,1,synthetic
+"Raise bridge by 2 mm",command,height,up,2,mm,,short form,sess138,1,synthetic
+"Lower tip by 1 mm",command,height,down,1,mm,,short form,sess139,1,synthetic
+"Narrow alars by 1 mm",command,width,down,1,mm,,short form,sess140,1,synthetic
+"Add projection to chin by 1 mm",command,projection,up,1,mm,,short form,sess141,1,synthetic
+"Widen jaw by 1 mm",command,width,up,1,mm,,short form,sess142,1,synthetic
+"Reduce it by half a millimeter",command,,,0.5,mm,,half mm,sess143,1,synthetic
+"Raise bridge by half mm",command,height,up,0.5,mm,,half mm,sess144,1,synthetic
+"Lower tip by a millimeter",command,height,down,1,mm,,a millimeter,sess145,1,synthetic
+"Increase chin by a mm",command,projection,up,1,mm,,a mm,sess146,1,synthetic
+"Narrow bridge by 1 mm",command,width,down,1,mm,,narrow bridge,sess147,1,synthetic
+"We may reduce the bridge by 2 mm",proposal,height,down,2,mm,,hedged multi-turn,sess148,1,synthetic
+"yes do that",confirm,,, ,,,confirm,sess148,2,synthetic
+"We could narrow the alar base",proposal,width,down,,,,"hedged multi-turn",sess149,1,synthetic
+"go ahead",confirm,,, ,,,confirm,sess149,2,synthetic
+"Maybe raise the tip by 1 mm",proposal,height,up,1,mm,,hedged multi-turn,sess150,1,synthetic
+"proceed",confirm,,, ,,,confirm,sess150,2,synthetic
+"Perhaps lower the bridge a bit",proposal,height,down,,,,"hedged multi-turn",sess151,1,synthetic
+"no don't do that",reject,,, ,,,reject,sess151,2,synthetic
+"Shall we refine the tip",question,,, ,,,question multi-turn,sess152,1,synthetic
+"never mind",reject,,, ,,,reject,sess152,2,synthetic
+"Increase jawline definition by 1 mm",command,definition,up,1,mm,,definition,sess153,1,synthetic
+"Add fullness to cheeks by 1 mm",command,fullness,up,1,mm,,fullness,sess154,1,synthetic
+"Reduce upper lip projection by 0.5 mm",command,projection,down,0.5,mm,,upper lip,sess155,1,synthetic
+"Increase lower lip fullness by 0.5 mm",command,fullness,up,0.5,mm,,lower lip,sess156,1,synthetic
+"Advance the chin by 1 mm",command,projection,up,1,mm,,chin,sess157,1,synthetic
+"Rotate the nasal tip upward by 4 degrees",command,rotation,up,4,degrees,,rotation,sess158,1,synthetic
+"Rotate the tip downward by 2 degrees",command,rotation,down,2,degrees,,rotation,sess159,1,synthetic
+"Widen the alar base by 1 mm",command,width,up,1,mm,,widen,sess160,1,synthetic
+"Broaden the jawline by 1.5 mm",command,width,up,1.5,mm,,broaden,sess161,1,synthetic
+"Pinch the nostrils by 0.5 mm",command,width,down,0.5,mm,,pinch,sess162,1,synthetic
+"Lift the tip by 1 mm",command,height,up,1,mm,,lift,sess163,1,synthetic
+"Augment the chin by 1 mm",command,projection,up,1,mm,,augment,sess164,1,synthetic
+"Project the tip more by 1 mm",command,projection,up,1,mm,,project,sess165,1,synthetic
+"Plump the lower lip by 0.5 mm",command,fullness,up,0.5,mm,,plump,sess166,1,synthetic
+"Sharpen the jawline by 1 mm",command,definition,up,1,mm,,sharpen,sess167,1,synthetic
+"Take down the hump by 1 mm",command,height,down,1,mm,,take down,sess168,1,synthetic
+"Boost cheek fullness by 1 mm",command,fullness,up,1,mm,,boost,sess169,1,synthetic
+"Add height to the bridge by 1 mm",command,height,up,1,mm,,add,sess170,1,synthetic
+"Gain projection on chin by 1 mm",command,projection,up,1,mm,,gain,sess171,1,synthetic
+"Make the bridge higher by 1 mm",command,height,up,1,mm,,higher,sess172,1,synthetic
+"Shorten the tip projection by 1 mm",command,projection,down,1,mm,,shorten,sess173,1,synthetic
+"Minimise the hump by 1 mm",command,height,down,1,mm,,minimise,sess174,1,synthetic
+"Broader jaw please",proposal,width,up,,,,"adjective form",sess175,1,synthetic
+"Thinner alars",proposal,width,down,,,,"adjective form",sess176,1,synthetic
+"More projection on the chin",proposal,projection,up,,,,"more without number",sess177,1,synthetic
+"Less projection on the tip",proposal,projection,down,,,,"less without number",sess178,1,synthetic
+"Higher bridge",proposal,height,up,,,,"adjective no number",sess179,1,synthetic
+"Lower tip",proposal,height,down,,,,"adjective no number",sess180,1,synthetic
+"Rotate the tip upward",ignored,rotation,up,,,,"rotation no value",sess181,1,synthetic
+"Turn the tip up by degrees",ignored,,, ,,,garbled,sess182,1,synthetic
+"Raise bridge two mm please",command,height,up,2,mm,,polite,sess183,1,synthetic
+"Could you narrow the alar base by 1 mm",proposal,width,down,1,mm,,polite hedged,sess184,1,synthetic
+"Would you mind reducing the tip by 1 mm",proposal,projection,down,1,mm,,very polite hedged,sess185,1,synthetic
+"Kindly raise the bridge by 1 mm",proposal,height,up,1,mm,,polite hedged,sess186,1,synthetic
+"Please do reduce the bridge by 2 mm",command,height,down,2,mm,,imperative with please,sess187,1,synthetic
+"Please raise the tip by 1 mm",command,height,up,1,mm,,imperative with please,sess188,1,synthetic
+"We'll reduce the bridge by 2 mm",proposal,height,down,2,mm,,future hedged,sess189,1,synthetic
+"Let us narrow the alar base",proposal,width,down,,,,"let us hedged",sess190,1,synthetic
+"I think we should raise the tip",proposal,height,up,,,,"i think hedged",sess191,1,synthetic
+"Probably best to reduce the hump",proposal,height,down,,,,"probably hedged",sess192,1,synthetic
+"Supposedly reduce the bridge",proposal,height,down,,,,"hedged",sess193,1,synthetic
+"Going to narrow the alars",proposal,width,down,,,,"going to hedged",sess194,1,synthetic
+"We need to reduce the bridge",proposal,height,down,,,,"need to hedged",sess195,1,synthetic
+"Should probably do the tip",proposal,,, ,,,vague hedged,sess196,1,synthetic
+"Maybe do the bridge by 2 mm",proposal,height,,,2,mm,,"maybe hedged with number",sess197,1,synthetic
+"Possibly raise the tip by 1 mm",proposal,height,up,1,mm,,possibly hedged,sess198,1,synthetic
+"Likely reduce the hump by 1 mm",proposal,height,down,1,mm,,likely hedged,sess199,1,synthetic
+"Potentially narrow the alar base by 1 mm",proposal,width,down,1,mm,,potentially hedged,sess200,1,synthetic
+"One might consider raising the bridge",proposal,height,up,,,,"one might hedged",sess201,1,synthetic
+"Reducing the bridge 2 mm might be good",proposal,height,down,2,mm,,gerund hedged,sess202,1,synthetic
+"2 mm reduction to bridge might help",proposal,height,down,2,mm,,noun hedged,sess203,1,synthetic
+"Bridge reduction of 2 mm could be considered",proposal,height,down,2,mm,,noun hedged,sess204,1,synthetic
+"Tip refinement might be nice",proposal,,, ,,,vague hedged,sess205,1,synthetic
+"Alar narrowing could be tried",proposal,width,down,,,,"noun hedged",sess206,1,synthetic
+"Chin advancement may help",proposal,projection,up,,,,"noun hedged",sess207,1,synthetic
+"Hump reduction is worth considering",proposal,height,down,,,,"noun hedged",sess208,1,synthetic
+"Jawline definition could use improvement",proposal,definition,up,,,,"hedged",sess209,1,synthetic
+"Cheek fullness might need adjustment",proposal,fullness,up,,,,"hedged",sess210,1,synthetic
+"Reduce the bridge by 2 mm all at once",command,height,down,2,mm,,all at once,sess211,1,synthetic
+"Perform all changes simultaneously raise bridge 2 mm narrow alar 1 mm",command,height;width,up;down,2;1,mm;mm,,simultaneous,sess212,1,synthetic
+"In one pass raise bridge by 2 mm and narrow alar base by 1 mm",command,height;width,up;down,2;1,mm;mm,,in one pass,sess213,1,synthetic
+"Do bridge up 2 mm and tip down 1 mm together",command,height;projection,up;down,2;1,mm;mm,,together,sess214,1,synthetic
+"All at once increase tip projection by 1 mm and rotate tip up by 2 degrees",command,projection;rotation,up;up,1;2,mm;degrees,,all at once,sess215,1,synthetic
+"Bring the bridge up by 2 millimetres",command,height,up,2,mm,,millimetres,sess216,1,synthetic
+"Take the hump down by 1.5 millimetres",command,height,down,1.5,mm,,millimetres,sess217,1,synthetic
+"Narrow the nostrils by one millimetre",command,width,down,1,mm,,millimetre,sess218,1,synthetic
+"Push the chin forward by 1 millimetre",command,projection,up,1,mm,,millimetre,sess219,1,synthetic
+"Rotate the tip cephalically by 3 degrees",command,rotation,up,3,degrees,,cephalic,sess220,1,synthetic
+"Set back the chin by 1 mm",command,projection,down,1,mm,,set back,sess221,1,synthetic
+"Draw in the alar base by 1 mm",command,width,down,1,mm,,draw in,sess222,1,synthetic
+"Open up the alar base by 1 mm",command,width,up,1,mm,,open up,sess223,1,synthetic
+"Deproject the tip by 1 mm",command,projection,down,1,mm,,deproject,sess224,1,synthetic
+"Cephalically rotate the tip by 2 degrees",command,rotation,up,2,degrees,,cephalically,sess225,1,synthetic
+"Do the opposite of reducing the bridge by 2 mm",ignored,height,down,2,mm,,double negative,sess226,1,synthetic
+"Not that I want to increase the tip by 1 mm",ignored,height,up,1,mm,,negated,sess227,1,synthetic
+"I don't not want to reduce the bridge",ignored,height,down,,,,"double negation unclear",sess228,1,synthetic
+"Make sure not to raise the tip",ignored,height,up,,,,"make sure not to",sess229,1,synthetic
+"Be careful not to narrow the alars",ignored,width,down,,,,"be careful not to",sess230,1,synthetic
+"How's it looking",ignored,,, ,,,small talk,sess231,1,synthetic
+"Looks good so far",ignored,,, ,,,small talk,sess232,1,synthetic
+"Okay",ignored,,, ,,,filler,sess233,1,synthetic
+"Alright",ignored,,, ,,,filler,sess234,1,synthetic
+"Mhm",ignored,,, ,,,filler,sess235,1,synthetic
+"Yeah",ignored,,, ,,,filler,sess236,1,synthetic
+"Umm",ignored,,, ,,,filler,sess237,1,synthetic
+"Ah",ignored,,, ,,,filler,sess238,1,synthetic
+"Right",ignored,,, ,,,filler,sess239,1,synthetic
+"Sure",ignored,,, ,,,filler,sess240,1,synthetic
+"Raise the bridge by 2 mm, lower the tip by 1 mm, narrow alar base by 1 mm, advance chin by 0.5 mm",command,height;projection;width;projection,up;down;down;up,2;1;1;0.5,mm;mm;mm;mm,,4 operations,sess241,1,synthetic
+"Do the following all at once: elevate bridge by 1.5 mm, deproject tip by 0.5 mm, rotate tip cephalically by 2 degrees, narrow alars by 1 mm, advance chin by 1 mm",command,height;projection;rotation;width;projection,up;down;up;down;up,1.5;0.5;2;1;1,mm;mm;degrees;mm;mm,,5 operations,sess242,1,synthetic
+"Perform simultaneously: raise bridge 2 mm, reduce hump 1 mm, lower tip projection 0.5 mm, increase tip rotation up 3 degrees, narrow alar base 1 mm, widen jaw 0.5 mm",command,height;height;projection;rotation;width;width,up;down;down;up;down;up,2;1;0.5;3;1;0.5,mm;mm;mm;degrees;mm;mm,,6 operations,sess243,1,synthetic
+"In one pass: bridge up 1.5 mm, tip projection down 1 mm, tip rotation up 2 degrees, alar base down 1 mm, chin projection up 1 mm, cheek fullness up 0.5 mm",command,height;projection;rotation;width;projection;fullness,up;down;up;down;up;up,1.5;1;2;1;1;0.5,mm;mm;degrees;mm;mm;mm,,6 operations,sess244,1,synthetic
+"All together: raise bridge by 2 mm, reduce dorsal hump by 1 mm, decrease tip projection by 1 mm, increase tip rotation by 3 degrees, narrow alar base by 1.5 mm, reduce alar flare by 1 mm, advance chin by 1 mm",command,height;height;projection;rotation;width;width;projection,up;down;down;up;down;down;up,2;1;1;3;1.5;1;1,mm;mm;mm;degrees;mm;mm;mm,,7 operations,sess245,1,synthetic
+"Reduce the bridge by 2 mm and let us also think about the tip",command,height,down,2,mm,,mixed command+hedge,sess246,1,synthetic
+"We may reduce the bridge by 2 mm and also raise the tip by 1 mm",proposal,height;height,down;up,2;1,mm;mm,,all hedged,sess247,1,synthetic
+"Raise the bridge by 2 mm could we also narrow the alar base",command;width,down,,,,"mixed unclear",sess248,1,synthetic
+"Actually reduce bridge by 1 mm, perhaps also adjust the tip",command,height,down,1,mm,,mixed,sess249,1,synthetic
+"Lower the tip by 1 mm no wait maybe just a bit",command,height,down,1,mm,,correction hedged,sess250,1,synthetic

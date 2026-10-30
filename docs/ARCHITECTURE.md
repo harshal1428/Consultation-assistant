@@ -124,12 +124,13 @@ startup.
 
 ```text
 ┌─ Browser (trusted for this prototype) ──────────────────────────┐
-│  speech recognition · photos · mesh · IndexedDB · API client    │
+│  speech recognition · photos · mesh · IndexedDB cache · API     │
 └───────────────┬─────────────────────────────────────────────────┘
-                │  HTTPS/HTTP, JSON, command text + last 4 items
+                │  HTTP/JSON: command text, context, consultation snapshots
 ┌───────────────▼─────────────────────────────────────────────────┐
-│  Backend (stateless)                                            │
+│  Backend                                                        │
 │  Pydantic enums · rules · optional LLM call · validation        │
+│  Local SQLite consultation archive (no photos)                  │
 └───────────────┬─────────────────────────────────────────────────┘
                 │  command text only (no identifiers, no images)
 ┌───────────────▼─────────────────────────────────────────────────┐
@@ -203,7 +204,7 @@ imports `main.py`.
 | Geometry | `scene/geometry/*` | Mesh construction, region weights, deformation, morphs, textures |
 | Services | `services/*` | HTTP, speech, MediaPipe, reconstruction, texture projection |
 | Hooks | `hooks/*` | Async lifecycles with cancellation/version tokens |
-| Storage | `lib/historyStore.ts` | IndexedDB archive with in-memory fallback |
+| Storage | `lib/consultationRepository.ts`, `lib/historyStore.ts`, `services/consultationApi.ts` | SQLite archive first, IndexedDB cache/fallback, REST client |
 
 `App.tsx` is deliberately the only component that owns simulation state. Panels
 receive values and callbacks; they do not reach into each other. This keeps the
@@ -216,7 +217,7 @@ data flow auditable and makes the pure modules independently testable.
 | `parser.py`, `validation.py`, `llm_parser.parse_payload` | `llm_parser.request_llm`, `main.py` routes |
 | `transformations/logic.ts`, `session/logic.ts`, `live/logic.ts` | `App.tsx` request orchestration |
 | `geometry/*` (except texture canvas creation) | `FaceViewer` WebGL, `speech.ts`, `faceLandmarker.ts` |
-| `lib/params.ts`, `lib/format.ts`, `lib/multiViewPhoto.ts` validation | `historyStore.ts` (IndexedDB) |
+| `lib/params.ts`, `lib/format.ts`, `lib/multiViewPhoto.ts` validation | `historyStore.ts` (IndexedDB), `consultationApi.ts` (SQLite REST) |
 | `multiViewFitting.ts` (linear algebra) | `multiViewReconstruction.ts` (canvas, MediaPipe) |
 
 ---
@@ -377,10 +378,20 @@ file; it is generated in the browser.
 
 ### 4.6 Archive
 
-`historyStore.ts` stores completed consultations in IndexedDB database
-`voicesurg-history` (version 1). If IndexedDB is unavailable, it falls back to an
-in-memory store for the tab's lifetime. Restoring an archived consultation
-rehydrates session, history, scenarios and notes; photos are not archived.
+The primary archive is a local SQLite database written by the FastAPI process
+(`backend/app/consultation_store.py`, default file
+`backend/app/data/voicesurg.db`). The REST endpoints are list/read/upsert/delete.
+The frontend facade (`lib/consultationRepository.ts`) is database-first and:
+
+1. mirrors database records into IndexedDB (`voicesurg-history`, version 1) as
+   an offline cache,
+2. migrates older browser-only records to SQLite when the backend is reachable,
+3. falls back to the IndexedDB/in-memory store when the backend is offline.
+
+`App.tsx` writes on explicit archive, on end, before a new consultation, and on a
+1.2-second debounced snapshot while working. Restoring a record rehydrates the
+model state plus transcript, proposals, events and scenarios; photographs are
+never archived. See [CONSULTATION_HISTORY_STORAGE.md](CONSULTATION_HISTORY_STORAGE.md).
 
 ---
 
@@ -459,6 +470,11 @@ currently the weakest link in the contract — see
 | `/health` | GET | — | `200 {"status":"ok"}` | — |
 | `/api/health` | GET | — | `200 {"status":"ok"}` | — |
 | `/api/parse-command` | POST | `{text, context?}` | `200 {instructions[], text}` | `400` empty text, `422` no instructions |
+| `/api/consultations` | GET | — | `200 [ConsultationRecord]` | — |
+| `/api/consultations/{id}` | GET | — | `200 ConsultationRecord` | `404` unknown |
+| `/api/consultations` | POST | `ConsultationRecord` | `201 ConsultationRecord` | `422` invalid body |
+| `/api/consultations/{id}` | DELETE | — | `204` | `404` unknown |
+| `/api/consultations` | DELETE | — | `204` (clear all) | — |
 
 The full field-by-field contract, including every enum value and validation rule,
 is in [Reference §2–4](REFERENCE.md#2-http-api).
@@ -468,7 +484,8 @@ is in [Reference §2–4](REFERENCE.md#2-http-api).
 | Store | Key | Value | Lifetime |
 | --- | --- | --- | --- |
 | React state (`App`) | n/a | session, history, scenarios, notices, mode | Tab |
-| IndexedDB `voicesurg-history` v1 | consultation id | archived consultation record | Until cleared |
+| SQLite `backend/app/data/voicesurg.db` | consultation id | archived consultation record | Until cleared |
+| IndexedDB `voicesurg-history` v1 | consultation id | offline cache/mirror of the archive | Until cleared |
 | In-memory fallback | consultation id | same shape | Tab |
 | `localStorage` | n/a | not used | n/a |
 
@@ -813,7 +830,7 @@ view refreshed on load, not live.
 | Last 4 context items | Yes, with the command | Gemini API | Target/parameter/operation/value only |
 | Photographs | **No** | — | Decoded in-tab; never uploaded |
 | Landmarks / meshes / textures | **No** | — | Memory only |
-| Consultation archive | **No** | IndexedDB in the browser | Not synced |
+| Consultation archive | **No** | Local SQLite on the backend machine, mirrored to IndexedDB | Not synced to a cloud service |
 | API key | Stored in `.env` | Backend only | Never sent to the browser |
 
 The frontend does not send photographs to the backend at any point. The backend does

@@ -119,20 +119,23 @@ backend/
     validation.py      bounds, target/parameter map, verdicts
     llm_parser.py      Gemini adapter
     parser_service.py  cascade + timeout + fallback
-  tests/               test_api.py, test_parser.py, test_parser_service.py
+    consultation_store.py  SQLite archive (list/get/upsert/delete)
+  tests/               test_api.py, test_parser.py, test_parser_service.py,
+                       test_consultations.py
 
 frontend/
   src/
     App.tsx            orchestration and all top-level state
     components/        24 presentation components
     hooks/             3 async controllers with version/token guards
-    lib/               params registry, formatting, photo rules, IndexedDB
+    lib/               params registry, formatting, photo rules, archive facade
+    services/          API, speech, MediaPipe, fitting, reconstruction, texture,
+                       SQLite consultation REST client
     scene/
       geometry/        head, regions, deformation, morphs, textures
       session/         proposals, transcript, scenarios, report
       live/            live event evaluation + exports
       transformations/ command/model-state logic
-    services/          API, speech, MediaPipe, fitting, reconstruction, texture
   tests/               25 Vitest files
   scripts/             head asset build, fixtures, browser check
   public/models/       MediaPipe task + canonical OBJ
@@ -152,7 +155,7 @@ scripts/               browser-check helper
 | New parameter | `frontend/src/lib/params.ts` → `types.ts` → `deformation.ts` → `ParameterPanel` tests |
 | New region | `regions.ts` → `deformation.ts` → `params.ts` (target map/labels) |
 | New UI panel | `components/`, wire in `App.tsx`, add a component test |
-| New storage field | `frontend/src/lib/historyStore.ts` (+ migration) |
+| New storage field | `backend/app/consultation_store.py` + `schemas.py` + `frontend/src/lib/historyStore.ts` (+ migration) |
 
 ---
 
@@ -212,6 +215,9 @@ setup in `tests/setup.ts`.
 | `App.test.tsx` | 11 | End-to-end consultation flow |
 | `ChangeSetReview.test.tsx` | 5 | Confirm/valid/reject behaviour |
 | `ConsultationHistoryPanel.test.tsx` | 5 | Archive rendering and actions |
+| `consultationApi.test.ts` | 5 | SQLite archive REST client, errors |
+| `consultationRepository.test.ts` | 3 | Database-first load, offline fallback, cache reconciliation |
+| `ViewerToolbar.test.tsx` | 2 | Heatmap control visibility and toggle state |
 | `faceMorph.test.ts` | 11 | Identity coefficients and clamping |
 | `faceProfile.test.ts` | 6 | Anthropometric ratios |
 | `faceReconstruction.test.ts` | 11 | Single-photo landmark → morph |
@@ -241,13 +247,14 @@ failure. Re-run before investigating.
 
 ### 5.2 Backend inventory
 
-**3 modules, 36 tests.** `unittest`, no pytest dependency required.
+Backend suite with `unittest`; no pytest dependency required.
 
 | File | Tests | Focus |
 | --- | --- | --- |
 | `test_api.py` | 5 | Routes, status codes, CORS |
 | `test_parser.py` | 25 | Lexicon, units, negation, context, contradictions |
 | `test_parser_service.py` | 6 | Cascade, fallback, qualitative guard, timeout |
+| `test_consultations.py` | 7 | SQLite create/list/read/upsert/delete/clear |
 
 Run from `backend/` so the relative imports resolve:
 
@@ -270,7 +277,7 @@ cd backend
 | Duplicate confirms cannot double-apply | `App.test.tsx` |
 | Stale async results are discarded | `App.test.tsx`, `useFacePersonalization.test.tsx` |
 | Photos never leave the device | `multiViewPhotoFlow.test.tsx`, `faceTexture.test.ts` |
-| Archive falls back when IndexedDB is unavailable | `historyStore.test.ts` |
+| Archive persists to SQLite and falls back when it is unavailable | `test_consultations.py`, `consultationApi.test.ts`, `historyStore.test.ts` |
 
 ### 5.4 Gaps in test coverage
 

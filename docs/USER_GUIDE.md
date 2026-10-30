@@ -77,7 +77,7 @@ Open `http://localhost:5173`.
 | --- | --- |
 | **Parsing service: online** | Voice and typed commands can be interpreted. |
 | **Parsing service: offline** | The backend is unreachable. Sliders and the 3D view still work; commands cannot be parsed. |
-| **Active · temporary** | The session lives in browser memory and is lost on reload unless archived. |
+| **Active · temporary** | The workspace state is edited in browser memory; it is auto-saved to the local SQLite archive and can be restored from **Previous consultations**. |
 | **Simulation prototype** | Reminder that this is not a clinical device. |
 
 The service indicator is probed every 15 seconds and recovers on its own.
@@ -85,8 +85,11 @@ The service indicator is probed every 15 seconds and recovers on its own.
 ### 2.4 Session lifetime
 
 A session starts automatically. Everything — transcript, applied changes,
-scenarios, live log — is held in memory. Reloading the page discards it unless you
-archive the consultation ([§7.5](#75-archive)). A warning dialog protects you if
+scenarios, live log — is held in memory while you work, and a debounced copy is
+saved to the local SQLite archive. Ending the consultation, starting a new one or
+pressing **Archive current** writes immediately ([§7.5](#75-previous-consultations-sqlite)).
+Reloading the page therefore does not lose the archived consultation; restore it
+from the **Previous consultations** panel. A warning dialog still protects you if
 you try to start a new consultation with unsaved work.
 
 ---
@@ -104,7 +107,7 @@ you try to start a new consultation with unsaved work.
 │   · parameter differences      │  · Simulation parameters    │
 │                                │  · Scenarios                │
 │                                │  · Session history          │
-│                                │  · Saved consultations      │
+│                                │  · Previous consultations   │
 └────────────────────────────────┴─────────────────────────────┘
 ```
 
@@ -367,8 +370,9 @@ backend is unavailable.
 
 A scenario stores the current parameter state, the command ids that produced it,
 a timestamp and optional notes. The hint under the name field summarises the
-current working values. Scenarios are in-memory only and are cleared on reload;
-archive the consultation to keep them across reloads.
+current working values. Scenarios live in the current session and are included
+when the consultation is archived to SQLite; restoring a previous consultation
+restores its scenarios too.
 
 ### 7.2 Loading, renaming, deleting
 
@@ -397,24 +401,38 @@ generated entirely in the browser.
 
 The live change log has its own exports (CSV/JSON/PDF) for audit-style records.
 
-### 7.5 Archive
+### 7.5 Previous consultations (SQLite)
 
-**Saved consultations → Archive current** stores the consultation in this
-browser's IndexedDB (database `voicesurg-history`):
+Every consultation is stored in a local SQLite database on the backend machine
+(`backend/app/data/voicesurg.db`). The panel header shows **SQLite database**
+when the backend is reachable and **Browser fallback** when only the on-device
+IndexedDB cache is available.
 
-- label, timestamps, status;
-- change count and scenario count;
-- final model state and summary;
-- personalisation summary and live events.
+Records are written:
 
-From the list you can **Restore** or **Delete**; **Clear all** removes every saved
-record. Photos are never archived. If IndexedDB is unavailable (for example in some
-private windows), an in-memory fallback keeps the feature working for the current
-tab only.
+- when you press **Previous consultations → Archive current**;
+- automatically when a consultation is ended;
+- automatically before **New consultation** discards the current work;
+- on a debounced (1.2 s) save while you are working.
 
-Restoring rewrites the working state from the archived model state. It does not
-restore the original transcript as a live session; it adds a
-`consultation_restored` event.
+Each record contains the label, timestamps, status, change/scenario counts, full
+model state, Markdown summary, live events, transcript, proposals, timeline
+events and scenarios. **Photographs are never archived.**
+
+From the list you can:
+
+| Action | Effect |
+| --- | --- |
+| **View consultation summary** | Expands the stored Markdown summary in place. |
+| **Restore** | Rewrites the working state and re-opens the full session narrative (transcript, proposals, events, scenarios) as an active consultation. |
+| **Delete** | Removes one record from the database and the local cache. |
+| **Clear all** | Removes every archived record. |
+| **Refresh archive** | Reloads the list from SQLite. |
+
+If the backend is offline, new records are kept in the browser cache and the
+panel falls back to it; they are migrated into SQLite the next time the backend
+is reachable. The SQLite file is unencrypted — treat it like any other local
+patient-data file.
 
 ---
 
@@ -429,8 +447,8 @@ This section is the operator-facing summary. The technical version is in
 | --- | --- |
 | Patient photographs | Decoded and processed in the tab. **Never uploaded.** |
 | Face landmarks, reconstructed mesh, skin texture | Memory only. **Never uploaded.** |
-| Consultation history, scenarios, live log | Browser memory. Lost on reload unless archived. |
-| Archive | IndexedDB on this device. Not synced, not encrypted by the app. |
+| Consultation history, scenarios, live log | Browser memory while active; auto-saved to the local SQLite archive. |
+| Archive | SQLite on the backend machine, mirrored to IndexedDB as an offline cache. Not synced to a cloud service, not encrypted by the app. |
 | Report and log exports | Downloaded to your filesystem. |
 
 ### 8.2 What leaves the device
@@ -461,8 +479,9 @@ logs request bodies.
 
 | Store | Used for | Cleared by |
 | --- | --- | --- |
-| Memory | Everything live | Reload, new consultation |
-| IndexedDB `voicesurg-history` | Archived consultations | **Clear all**, browser site-data clearing |
+| Memory | The live workspace | Reload, new consultation |
+| SQLite `backend/app/data/voicesurg.db` | Previous consultations (primary archive) | **Clear all**, deleting the database file |
+| IndexedDB `voicesurg-history` | Offline cache/mirror of the archive | **Clear all**, browser site-data clearing |
 | `localStorage` | Not used | — |
 
 ---
@@ -600,9 +619,9 @@ Read these before using the output in a conversation.
 
 ### 10.3 Practical
 
-- **Memory-only sessions.** Reload discards unarchived work.
-- **Archive is unencrypted and device-local.** It is not a records system.
-- **No automatic retention.** You must clear it.
+- **Working sessions are memory-first.** The SQLite archive is auto-saved, but the live workspace itself is rebuilt from the archive on restore.
+- **Archive is unencrypted and machine-local.** It is not a records system.
+- **No automatic retention.** You must clear it; deleting the database file also removes it.
 - **Photographs are not archived.**
 - **Low-end devices** may render slowly during deformation or reconstruction.
 
@@ -650,8 +669,9 @@ demonstration, not buried in this file.
 
 | Symptom | What to do |
 | --- | --- |
-| Work disappeared after reload | Sessions are memory-only; archive before reloading. |
-| Archive is empty | IndexedDB may be blocked (private mode); the in-memory fallback does not survive reload. |
+| Work disappeared after reload | Open **Previous consultations** and restore the auto-saved record. The live workspace is memory-only, but the archive is written while you work. |
+| Archive is empty | The backend may be offline (the chip shows **Browser fallback**); start uvicorn on port 8000 and press **Refresh archive**. In private mode IndexedDB may also be blocked. |
+| Panel says **Browser fallback** | The SQLite database is unreachable; records are kept in the browser cache until the backend returns. |
 | "Could not generate the consultation summary" | Try again after a change; if it persists, export the live log instead. |
 | Everything looks reset | Check **Reset simulation** was not pressed; undo history is not recoverable after a reset. |
 

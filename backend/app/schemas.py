@@ -7,9 +7,9 @@ influence the simulation.
 """
 
 from enum import Enum
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TargetRegion(str, Enum):
@@ -136,3 +136,34 @@ class ParseResponse(BaseModel):
 
     instructions: List[Instruction]
     text: str
+
+
+class ConsultationRecord(BaseModel):
+    """One archived consultation, stored in the local SQLite database.
+
+    Field names use the same camelCase spelling as the frontend
+    ``ArchivedConsultation`` contract so the two sides share one shape. Nested
+    simulation/session values stay as free-form JSON; the backend is a durable
+    store, not a second source of truth for the simulation schema.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: str
+    label: str
+    saved_at: int = Field(alias="savedAt")
+    started_at: int = Field(alias="startedAt")
+    ended_at: Optional[int] = Field(default=None, alias="endedAt")
+    status: str = "active"
+    change_count: int = Field(default=0, alias="changeCount")
+    scenario_count: int = Field(default=0, alias="scenarioCount")
+    model_state: Dict[str, Any] = Field(alias="modelState")
+    summary: str = ""
+    personalization: Optional[Dict[str, Any]] = None
+    live_events: Optional[List[Dict[str, Any]]] = Field(default=None, alias="liveEvents")
+    transcript: Optional[List[Dict[str, Any]]] = None
+    proposals: Optional[List[Dict[str, Any]]] = None
+    events: Optional[List[Dict[str, Any]]] = None
+    scenarios: Optional[List[Dict[str, Any]]] = None
+    created_at: Optional[str] = Field(default=None, alias="createdAt")
+    updated_at: Optional[str] = Field(default=None, alias="updatedAt")
