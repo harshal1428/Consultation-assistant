@@ -129,6 +129,9 @@ class CommandRequest(BaseModel):
     # At most the last few applied instructions. The server truncates this and
     # never persists it.
     context: Optional[List[ContextItem]] = None
+    # Provenance supplied by a client ("voice" or "typed"). Parsing behaviour is
+    # identical; this keeps the existing endpoint the single parse pathway.
+    source: Optional[str] = None
 
 
 class ParseResponse(BaseModel):

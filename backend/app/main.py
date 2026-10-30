@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import consultation_store
 from .parser_service import parse_command
 from .schemas import CommandRequest, ConsultationRecord, ParseResponse
+from .voice.dev import router as voice_dev_router
+from .voice.ws import router as voice_router
 
 import os
 
@@ -23,6 +25,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(voice_router)
+app.include_router(voice_dev_router)
 
 
 @app.get("/health")

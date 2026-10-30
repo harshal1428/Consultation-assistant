@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "description": "Editable nasal/rhinoplasty voice lexicon. Canonical terms are inserted into ASR hotwords. Corrections never rewrite digits.",
+  "terms": [
+    {
+      "canonical": "nasal bridge",
+      "aliases": ["bridge", "nasal bridge", "radix", "nasion", "dorsal hump", "dorsum", "nasal dorsum"],
+      "mishearings": ["brige", "bridg", "nay zhon", "ray dix", "door sum", "dorsel hump"]
+    },
+    {
+      "canonical": "nasal tip",
+      "aliases": ["tip", "nasal tip", "pronasale", "supratip", "supratip break"],
+      "mishearings": ["nay sal tip", "pro nasa lee", "soo pruh tip"]
+    },
+    {
+      "canonical": "alar base",
+      "aliases": ["alar base", "alar", "alar rim", "nasal base", "nostril", "nostrils", "nostril region", "sill"],
+      "mishearings": ["aller base", "alor base", "al ar base", "nostrel", "nostrills", "nostril region"]
+    },
+    {
+      "canonical": "columella",
+      "aliases": ["columella", "columellar", "columella base"],
+      "mishearings": ["colonel", "colonel a", "column ella", "columela", "columella", "columnar"]
+    },
+    {
+      "canonical": "septal region",
+      "aliases": ["septal region", "septum", "septal", "septoplasty"],
+      "mishearings": ["septal regen", "sep tum", "septum region"]
+    },
+    {
+      "canonical": "upper lip",
+      "aliases": ["upper lip", "upper lip projection", "upper lip fullness"],
+      "mishearings": ["upper leap", "upper lip projection"]
+    },
+    {
+      "canonical": "lower lip",
+      "aliases": ["lower lip", "lower lip projection", "lower lip fullness"],
+      "mishearings": ["lower leap"]
+    },
+    {
+      "canonical": "jawline",
+      "aliases": ["jawline", "jaw line", "jaw", "mandible", "mandibular"],
+      "mishearings": ["jaw lyn", "jaw line", "man duh bull"]
+    },
+    {
+      "canonical": "chin",
+      "aliases": ["chin", "menton", "pogonion"],
+      "mishearings": ["chinn", "po go nee on"]
+    },
+    {
+      "canonical": "cheek",
+      "aliases": ["cheek", "cheeks", "malar"],
+      "mishearings": ["cheak", "cheeks", "may lar"]
+    },
+    {
+      "canonical": "height",
+      "aliases": ["height", "raise", "lower", "lift", "drop", "up", "down"],
+      "mishearings": ["hight", "heighth"]
+    },
+    {
+      "canonical": "width",
+      "aliases": ["width", "widen", "narrow", "wide", "alar width"],
+      "mishearings": ["wideth", "with", "widen"]
+    },
+    {
+      "canonical": "projection",
+      "aliases": ["projection", "project", "increase", "decrease", "advance", "retract", "fullness"],
+      "mishearings": ["pro jection", "project shun"]
+    },
+    {
+      "canonical": "rotation",
+      "aliases": ["rotation", "rotate", "rotated", "upward", "downward"],
+      "mishearings": ["row tation", "ro tate"]
+    },
+    {
+      "canonical": "degrees",
+      "aliases": ["degrees", "degree", "deg", "°"],
+      "mishearings": ["deegrees", "digrees", "de gree", "de grees"]
+    },
+    {
+      "canonical": "definition",
+      "aliases": ["definition", "define", "sharpness", "sharp"],
+      "mishearings": ["def inition", "definishun"]
+    },
+    {
+      "canonical": "fullness",
+      "aliases": ["fullness", "full", "pout", "plump"],
+      "mishearings": ["full ness", "pout"]
+    },
+    {
+      "canonical": "millimetre",
+      "aliases": ["millimetre", "millimeter", "millimetres", "millimeters", "mm", "mil", "mils"],
+      "mishearings": ["milli meter", "milli metre", "m m", "mms", "milimetre"]
+    },
+    {
+      "canonical": "left side",
+      "aliases": ["left side", "left", "patient left"],
+      "mishearings": ["left sigh", "left syd"]
+    },
+    {
+      "canonical": "right side",
+      "aliases": ["right side", "right", "patient right"],
+      "mishearings": ["right sigh", "rite side"]
+    }
+  ]
+}
