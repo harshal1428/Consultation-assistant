@@ -51,19 +51,30 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "brand session actions"
+    "brand mode actions";
   align-items: center;
-  gap: 20px;
-  padding: 12px 24px;
+  column-gap: 22px;
+  row-gap: 8px;
+  padding: 10px 24px;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
 }
 
 .app-header__brand {
+  grid-area: brand;
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+}
+
+.app-header__titles {
+  min-width: 0;
 }
 
 .app-header__mark {
@@ -74,6 +85,14 @@
   color: #fff;
   display: grid;
   place-items: center;
+  flex: 0 0 auto;
+}
+
+.app-header__titles h1,
+.app-header__titles p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app-header__titles h1 {
@@ -90,21 +109,54 @@
 }
 
 .app-header__session {
+  grid-area: session;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin-left: auto;
+  gap: 6px;
+  min-width: 0;
+}
+
+.app-header__badge-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-header__session .badge--identity {
+  max-width: min(240px, 32vw);
+}
+
+.app-header__session .badge--session {
+  max-width: min(220px, 30vw);
 }
 
 .app-header__mode {
+  grid-area: mode;
   display: flex;
   align-items: center;
+  min-width: 0;
 }
 
 .app-header__actions {
+  grid-area: actions;
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.app-header__status,
+.app-header__buttons {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
 }
 
 /* Badges & chips ----------------------------------------------------------- */
@@ -631,6 +683,72 @@
   margin: 12px 0 0;
   font-size: 0.68rem;
   color: var(--text-3);
+}
+
+.archive__patients {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.archive__patient {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.archive__patient-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.archive__patient-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.archive__patient-meta {
+  margin: 2px 0 0;
+  font-size: 0.7rem;
+  color: var(--text-3);
+}
+
+/* Patient identity --------------------------------------------------------- */
+.patient-context__grid,
+.patient-dialog__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.patient-context__note {
+  margin: 10px 0 0;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: var(--text-3);
+}
+
+.patient-dialog__intro {
+  margin: 0 0 14px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.patient-dialog__error {
+  margin: 12px 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--danger);
 }
 
 .face-viewer {
@@ -2061,15 +2179,29 @@
   }
 
   .app-header {
-    flex-wrap: wrap;
-  }
-
-  .app-header__session {
-    margin-left: 0;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand mode"
+      "session session"
+      "actions actions";
   }
 
   .app-header__actions {
-    margin-left: auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .app-header__status,
+  .app-header__buttons {
+    width: auto;
+  }
+}
+
+@media (max-width: 960px) {
+  .app-header {
+    position: static;
   }
 }
 
@@ -2079,8 +2211,40 @@
   }
 
   .app-header {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "brand"
+      "session"
+      "mode"
+      "actions";
     padding: 10px 14px;
-    gap: 12px;
+    row-gap: 9px;
+  }
+
+  .app-header__actions {
+    align-items: flex-start;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .app-header__status,
+  .app-header__buttons {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .app-header__session .badge--identity,
+  .app-header__session .badge--session {
+    max-width: 100%;
+  }
+
+  .app-header__buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  }
+
+  .app-header__buttons .btn {
+    width: 100%;
   }
 
   .viewport {

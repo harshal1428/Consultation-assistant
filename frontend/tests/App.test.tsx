@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { Instruction } from "../src/scene/transformations/types";
+import type { ArchivedConsultation } from "../src/lib/historyStore";
 
 vi.mock("../src/components/FaceViewer", () => ({
   FaceViewer: () => null,
@@ -11,10 +12,22 @@ vi.mock("../src/services/api", () => ({
   checkBackendHealth: vi.fn().mockResolvedValue(true),
 }));
 
+// Keep the suite hermetic: never call a developer's running backend.
+vi.mock("../src/services/consultationApi", () => ({
+  listRemoteConsultations: vi.fn().mockResolvedValue([]),
+  getRemoteConsultation: vi.fn(),
+  saveRemoteConsultation: vi.fn(async (record: unknown) => record),
+  deleteRemoteConsultation: vi.fn().mockResolvedValue(undefined),
+  clearRemoteConsultations: vi.fn().mockResolvedValue(undefined),
+}));
+
 import App from "../src/App";
 import { parseCommandAPI } from "../src/services/api";
+import { listRemoteConsultations } from "../src/services/consultationApi";
+import { resetModel } from "../src/scene/transformations/logic";
 
 const parseMock = vi.mocked(parseCommandAPI);
+const listMock = vi.mocked(listRemoteConsultations);
 
 function instr(overrides: Partial<Instruction> = {}): Instruction {
   return {
@@ -45,10 +58,13 @@ async function submitCommand(text = "raise the tip by 2 mm") {
 
 beforeEach(() => {
   parseMock.mockReset();
+  listMock.mockReset();
+  listMock.mockResolvedValue([]);
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("consultation workflow", () => {
@@ -123,6 +139,88 @@ describe("consultation workflow", () => {
     expect(
       await screen.findByText(/Consultation summary downloaded/),
     ).toBeInTheDocument();
+  });
+});
+
+describe("patient sessions", () => {
+  it("starts an independent workspace for a new patient", async () => {
+    parseMock.mockResolvedValue({ instructions: [instr()], text: "x" });
+    render(<App />);
+
+    await submitCommand();
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Confirm & simulate/i }),
+    );
+    expect(await screen.findByText(/1 change · in-memory only/)).toBeInTheDocument();
+
+    const currentPanel = screen.getByRole("region", { name: /Patient and surgeon/i });
+    fireEvent.change(within(currentPanel).getByLabelText(/Patient name/i), {
+      target: { value: "Patient A" },
+    });
+    fireEvent.change(within(currentPanel).getByLabelText(/Surgeon/i), {
+      target: { value: "Dr. Alpha" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /New consultation/i }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText(/Patient name/i), {
+      target: { value: "Patient B" },
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: /Start new consultation/i }),
+    );
+
+    // The previous patient's change history must not leak into the new session.
+    expect(screen.queryByText(/1 change · in-memory only/)).not.toBeInTheDocument();
+    const nextPanel = screen.getByRole("region", { name: /Patient and surgeon/i });
+    expect(within(nextPanel).getByLabelText(/Patient name/i)).toHaveValue("Patient B");
+    expect(within(nextPanel).getByLabelText(/Surgeon/i)).toHaveValue("Dr. Alpha");
+  });
+
+  it("restores a previous patient's identity and saved session state", async () => {
+    const record: ArchivedConsultation = {
+      id: "session-restored",
+      label: "Consultation 09:00",
+      savedAt: Date.now(),
+      startedAt: Date.now() - 60_000,
+      endedAt: Date.now() - 30_000,
+      status: "ended",
+      patientId: "MRN-77",
+      patientName: "Patient Z",
+      surgeonName: "Dr. Zed",
+      changeCount: 1,
+      scenarioCount: 0,
+      modelState: { ...resetModel(), tipHeight: 2 },
+      summary: "# Saved",
+      liveEvents: [],
+      transcript: [
+        {
+          id: "t-restored",
+          createdAt: Date.now() - 50_000,
+          source: "typed",
+          text: "restored instruction",
+          status: "parsed",
+          outcome: "confirmed",
+        },
+      ],
+      proposals: [],
+      events: [],
+      scenarios: [],
+    };
+    listMock.mockResolvedValue([record]);
+    render(<App />);
+
+    // The archive is loaded asynchronously from the database.
+    await screen.findByRole("heading", { name: /Patient Z/i });
+    fireEvent.click(
+      screen.getByRole("button", { name: /Restore Consultation 09:00/i }),
+    );
+
+    const panel = screen.getByRole("region", { name: /Patient and surgeon/i });
+    expect(within(panel).getByLabelText(/Patient name/i)).toHaveValue("Patient Z");
+    expect(within(panel).getByLabelText(/Patient ID/i)).toHaveValue("MRN-77");
+    expect(within(panel).getByLabelText(/Surgeon/i)).toHaveValue("Dr. Zed");
+    expect(await screen.findByText(/1 change · in-memory only/)).toBeInTheDocument();
   });
 });
 

@@ -381,7 +381,9 @@ file; it is generated in the browser.
 The primary archive is a local SQLite database written by the FastAPI process
 (`backend/app/consultation_store.py`, default file
 `backend/app/data/voicesurg.db`). The REST endpoints are list/read/upsert/delete.
-The frontend facade (`lib/consultationRepository.ts`) is database-first and:
+Each row carries `patient_id`, `patient_name` and `surgeon_name`; an additive
+migration adds those columns to older database files. The frontend facade
+(`lib/consultationRepository.ts`) is database-first and:
 
 1. mirrors database records into IndexedDB (`voicesurg-history`, version 1) as
    an offline cache,
@@ -389,9 +391,13 @@ The frontend facade (`lib/consultationRepository.ts`) is database-first and:
 3. falls back to the IndexedDB/in-memory store when the backend is offline.
 
 `App.tsx` writes on explicit archive, on end, before a new consultation, and on a
-1.2-second debounced snapshot while working. Restoring a record rehydrates the
-model state plus transcript, proposals, events and scenarios; photographs are
-never archived. See [CONSULTATION_HISTORY_STORAGE.md](CONSULTATION_HISTORY_STORAGE.md).
+1.2-second debounced snapshot while working, but only when the patient name and
+surgeon are set. Creating or restoring a consultation replaces every
+consultation-scoped state (history, narrative, live log, photos, reconstruction,
+personalization, speech buffers) before the next one is loaded, so sessions are
+independent. Restoring a record rehydrates the model state plus transcript,
+proposals, events, scenarios and identity; photographs are never archived. See
+[CONSULTATION_HISTORY_STORAGE.md](CONSULTATION_HISTORY_STORAGE.md).
 
 ---
 
@@ -484,7 +490,7 @@ is in [Reference §2–4](REFERENCE.md#2-http-api).
 | Store | Key | Value | Lifetime |
 | --- | --- | --- | --- |
 | React state (`App`) | n/a | session, history, scenarios, notices, mode | Tab |
-| SQLite `backend/app/data/voicesurg.db` | consultation id | archived consultation record | Until cleared |
+| SQLite `backend/app/data/voicesurg.db` | consultation id (indexed by patient id) | archived consultation record with patient/surgeon identity | Until cleared |
 | IndexedDB `voicesurg-history` v1 | consultation id | offline cache/mirror of the archive | Until cleared |
 | In-memory fallback | consultation id | same shape | Tab |
 | `localStorage` | n/a | not used | n/a |

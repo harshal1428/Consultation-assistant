@@ -212,11 +212,13 @@ setup in `tests/setup.ts`.
 | File | Tests | Focus |
 | --- | --- | --- |
 | `api.test.ts` | 4 | HTTP client, timeouts, error mapping |
-| `App.test.tsx` | 11 | End-to-end consultation flow |
+| `App.test.tsx` | 13 | End-to-end consultation flow, restore and patient-session isolation |
 | `ChangeSetReview.test.tsx` | 5 | Confirm/valid/reject behaviour |
-| `ConsultationHistoryPanel.test.tsx` | 5 | Archive rendering and actions |
+| `ConsultationHistoryPanel.test.tsx` | 6 | Archive rendering, patient grouping and actions |
+| `NewConsultationDialog.test.tsx` | 3 | Required identity fields and new-patient flow |
 | `consultationApi.test.ts` | 5 | SQLite archive REST client, errors |
 | `consultationRepository.test.ts` | 3 | Database-first load, offline fallback, cache reconciliation |
+| `patient.test.ts` | 3 | Identity validation, normalization and grouping |
 | `ViewerToolbar.test.tsx` | 2 | Heatmap control visibility and toggle state |
 | `faceMorph.test.ts` | 11 | Identity coefficients and clamping |
 | `faceProfile.test.ts` | 6 | Anthropometric ratios |
@@ -254,7 +256,7 @@ Backend suite with `unittest`; no pytest dependency required.
 | `test_api.py` | 5 | Routes, status codes, CORS |
 | `test_parser.py` | 25 | Lexicon, units, negation, context, contradictions |
 | `test_parser_service.py` | 6 | Cascade, fallback, qualitative guard, timeout |
-| `test_consultations.py` | 7 | SQLite create/list/read/upsert/delete/clear |
+| `test_consultations.py` | 10 | SQLite create/list/read/upsert/delete/clear, patient fields, legacy migration |
 
 Run from `backend/` so the relative imports resolve:
 
@@ -666,8 +668,9 @@ what the extension intends to do.
 
 - [ ] Backend and frontend tests updated on both sides.
 - [ ] [Reference §3–4](REFERENCE.md#3-schemas) updated.
-- [ ] Any archived record migration considered. The current store has version 1
-      and no migration path; adding fields is safe, renaming is not.
+- [ ] Any archived record migration considered. The SQLite store performs
+      additive column migrations on startup (`_ensure_columns`), so adding
+      nullable/defaulted fields is safe; renaming or removing fields is not.
 
 ---
 

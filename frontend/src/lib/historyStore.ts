@@ -43,6 +43,10 @@ export interface ArchivedConsultation {
   scenarioCount: number;
   modelState: ModelState;
   summary: string;
+  /** Patient identity captured for this consultation (absent on legacy records). */
+  patientId?: string;
+  patientName?: string;
+  surgeonName?: string;
   /** Absent on records saved before photo personalization existed. */
   personalization?: ArchivedPersonalization | null;
   /** Live Simulation change log captured with this record. */

@@ -1,6 +1,7 @@
 """SQLite consultation archive contract tests (no network)."""
 
 import os
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -19,6 +20,9 @@ def make_record(record_id: str = "session-test-1", saved_at: int = 1000) -> dict
         "startedAt": saved_at - 500,
         "endedAt": saved_at,
         "status": "ended",
+        "patientId": "MRN-1001",
+        "patientName": "Asha Rao",
+        "surgeonName": "Dr. Mehta",
         "changeCount": 2,
         "scenarioCount": 1,
         "modelState": {"tipHeight": 3, "bridgeHeight": 0},
@@ -57,6 +61,9 @@ class ConsultationStoreTests(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         saved = response.json()
         self.assertEqual(saved["id"], "session-test-1")
+        self.assertEqual(saved["patientId"], "MRN-1001")
+        self.assertEqual(saved["patientName"], "Asha Rao")
+        self.assertEqual(saved["surgeonName"], "Dr. Mehta")
         self.assertEqual(saved["modelState"]["tipHeight"], 3)
         self.assertEqual(saved["transcript"][0]["text"], "raise the tip")
         self.assertTrue(saved["createdAt"])
@@ -88,6 +95,32 @@ class ConsultationStoreTests(unittest.TestCase):
         self.assertEqual(listed[0]["changeCount"], 9)
         self.assertEqual(listed[0]["savedAt"], 5000)
 
+    def test_updates_patient_and_surgeon_on_upsert(self):
+        self.client.post("/api/consultations", json=make_record("same", 1000))
+        updated = make_record("same", 2000)
+        updated["patientId"] = "MRN-2002"
+        updated["patientName"] = "Ravi Kumar"
+        updated["surgeonName"] = "Dr. Iyer"
+        self.client.post("/api/consultations", json=updated)
+
+        listed = self.client.get("/api/consultations").json()
+        self.assertEqual(len(listed), 1)
+        self.assertEqual(listed[0]["patientId"], "MRN-2002")
+        self.assertEqual(listed[0]["patientName"], "Ravi Kumar")
+        self.assertEqual(listed[0]["surgeonName"], "Dr. Iyer")
+
+    def test_legacy_payload_without_patient_fields_uses_empty_defaults(self):
+        legacy = make_record("legacy")
+        legacy.pop("patientId")
+        legacy.pop("patientName")
+        legacy.pop("surgeonName")
+        response = self.client.post("/api/consultations", json=legacy)
+        self.assertEqual(response.status_code, 201)
+        saved = response.json()
+        self.assertEqual(saved["patientId"], "")
+        self.assertEqual(saved["patientName"], "")
+        self.assertEqual(saved["surgeonName"], "")
+
     def test_returns_404_for_unknown_consultation(self):
         response = self.client.get("/api/consultations/missing")
         self.assertEqual(response.status_code, 404)
@@ -106,6 +139,50 @@ class ConsultationStoreTests(unittest.TestCase):
         cleared = self.client.delete("/api/consultations")
         self.assertEqual(cleared.status_code, 204)
         self.assertEqual(self.client.get("/api/consultations").json(), [])
+
+    def test_additive_migration_adds_patient_columns_to_old_database(self):
+        # Simulate a database file created before the patient columns existed.
+        connection = sqlite3.connect(self.db)
+        connection.executescript(
+            """
+            CREATE TABLE consultations (
+                id              TEXT PRIMARY KEY,
+                label           TEXT NOT NULL,
+                saved_at        INTEGER NOT NULL,
+                started_at      INTEGER NOT NULL,
+                ended_at        INTEGER,
+                status          TEXT NOT NULL,
+                change_count    INTEGER NOT NULL DEFAULT 0,
+                scenario_count  INTEGER NOT NULL DEFAULT 0,
+                model_state     TEXT NOT NULL,
+                summary         TEXT NOT NULL DEFAULT '',
+                personalization TEXT,
+                live_events     TEXT,
+                transcript      TEXT,
+                proposals       TEXT,
+                events          TEXT,
+                scenarios       TEXT,
+                created_at      TEXT NOT NULL,
+                updated_at      TEXT NOT NULL
+            );
+            """
+        )
+        connection.execute(
+            "INSERT INTO consultations (id, label, saved_at, started_at, status, "
+            "model_state, created_at, updated_at) "
+            "VALUES ('legacy-db', 'Legacy', 1000, 900, 'ended', '{}', 'now', 'now')"
+        )
+        connection.commit()
+        connection.close()
+
+        response = self.client.get("/api/consultations")
+        self.assertEqual(response.status_code, 200)
+        rows = response.json()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["id"], "legacy-db")
+        self.assertEqual(rows[0]["patientId"], "")
+        self.assertEqual(rows[0]["patientName"], "")
+        self.assertEqual(rows[0]["surgeonName"], "")
 
     def test_store_writes_a_real_sqlite_file(self):
         consultation_store.save_consultation(make_record())

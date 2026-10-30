@@ -7,6 +7,9 @@ interface AppHeaderProps {
   sessionStatus: SessionStatus;
   backendOnline: boolean | null;
   canReset: boolean;
+  patientName?: string;
+  patientId?: string;
+  surgeonName?: string;
   mode: WorkspaceMode;
   onModeChange: (mode: WorkspaceMode) => void;
   onNewConsultation: () => void;
@@ -24,6 +27,9 @@ export function AppHeader({
   sessionStatus,
   backendOnline,
   canReset,
+  patientName = "",
+  patientId = "",
+  surgeonName = "",
   mode,
   onModeChange,
   onNewConsultation,
@@ -52,20 +58,37 @@ export function AppHeader({
       </div>
 
       <div className="app-header__session">
-        <span className="badge badge--neutral">{sessionLabel}</span>
+        <span
+          className="badge badge--neutral badge--identity"
+          title={
+            patientId
+              ? `Patient: ${patientName || "Unassigned"} · ID: ${patientId}`
+              : "No patient ID entered"
+          }
+        >
+          <Icon name="user" size={13} />
+          <span className="app-header__badge-text">
+            {patientName || "No patient selected"}
+          </span>
+        </span>
+        <span
+          className="badge badge--neutral badge--identity"
+          title={surgeonName ? `Surgeon: ${surgeonName}` : "Surgeon not set"}
+        >
+          <Icon name="shield" size={13} />
+          <span className="app-header__badge-text">
+            {surgeonName ? `Surgeon · ${surgeonName}` : "Surgeon not set"}
+          </span>
+        </span>
+        <span className="badge badge--neutral badge--session" title={sessionLabel}>
+          <span className="app-header__badge-text">{sessionLabel}</span>
+        </span>
         <span
           className={`badge ${ended ? "badge--ended" : "badge--active"}`}
           title="This session is held only in browser memory and is lost on reload."
         >
           <Icon name={ended ? "stop" : "activity"} size={13} />
           {ended ? "Ended · temporary" : "Active · temporary"}
-        </span>
-        <span
-          className="badge badge--prototype"
-          title="This is an assistive simulation prototype, not a clinical device."
-        >
-          <Icon name="shield" size={13} />
-          Simulation prototype
         </span>
       </div>
 
@@ -86,36 +109,53 @@ export function AppHeader({
       </div>
 
       <div className="app-header__actions">
-        <div className={`service-status ${backendState.className}`}>
-          <span className="service-status__dot" aria-hidden="true" />
-          <span>{backendState.label}</span>
+        <div className="app-header__status">
+          <div className={`service-status ${backendState.className}`}>
+            <span className="service-status__dot" aria-hidden="true" />
+            <span>{backendState.label}</span>
+          </div>
+          <span
+            className="badge badge--prototype"
+            title="This is an assistive simulation prototype, not a clinical device."
+          >
+            <Icon name="shield" size={13} />
+            Simulation prototype
+          </span>
         </div>
 
-        <button
-          type="button"
-          className="btn btn--ghost btn--sm"
-          onClick={onResetSimulation}
-          disabled={!canReset || ended}
-          title={canReset ? "Reset working parameters to baseline" : "No changes to reset"}
-        >
-          <Icon name="resetView" size={15} />
-          Reset simulation
-        </button>
+        <div className="app-header__buttons">
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            onClick={onResetSimulation}
+            disabled={!canReset || ended}
+            title={canReset ? "Reset working parameters to baseline" : "No changes to reset"}
+          >
+            <Icon name="resetView" size={15} />
+            Reset simulation
+          </button>
 
-        <button
-          type="button"
-          className="btn btn--ghost btn--sm"
-          onClick={onEndConsultation}
-          disabled={ended}
-        >
-          <Icon name="stop" size={15} />
-          End consultation
-        </button>
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            onClick={onEndConsultation}
+            disabled={ended}
+            title="End the current consultation"
+          >
+            <Icon name="stop" size={15} />
+            End consultation
+          </button>
 
-        <button type="button" className="btn btn--primary btn--sm" onClick={onNewConsultation}>
-          <Icon name="newSession" size={15} />
-          New consultation
-        </button>
+          <button
+            type="button"
+            className="btn btn--primary btn--sm"
+            onClick={onNewConsultation}
+            title="Start a new patient consultation"
+          >
+            <Icon name="newSession" size={15} />
+            New consultation
+          </button>
+        </div>
       </div>
     </header>
   );

@@ -31,7 +31,8 @@ export type IconName =
   | "chevron"
   | "image"
   | "upload"
-  | "compare";
+  | "compare"
+  | "user";
 
 const ICONS: Record<IconName, string> = {
   mic: "M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z|M19 10v2a7 7 0 0 1-14 0v-2|M12 19v4|M8 23h8",
@@ -72,6 +73,7 @@ const ICONS: Record<IconName, string> = {
   image: "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z|circle:8.5,8.5,1.5|M21 15l-5-5L5 21",
   upload: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4|M17 8l-5-5-5 5|M12 3v12",
   compare: "M12 3v18|M8 7L4 11l4 4|M16 7l4 4-4 4",
+  user: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2|circle:12,7,4",
 };
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, "name"> {

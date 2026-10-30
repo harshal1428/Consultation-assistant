@@ -403,10 +403,21 @@ The live change log has its own exports (CSV/JSON/PDF) for audit-style records.
 
 ### 7.5 Previous consultations (SQLite)
 
-Every consultation is stored in a local SQLite database on the backend machine
-(`backend/app/data/voicesurg.db`). The panel header shows **SQLite database**
-when the backend is reachable and **Browser fallback** when only the on-device
-IndexedDB cache is available.
+Every consultation is stored against a patient and surgeon in a local SQLite
+database on the backend machine (`backend/app/data/voicesurg.db`). Enter the
+**Patient name** and **Surgeon** in the *Patient & surgeon* panel; the patient
+ID/MRN is optional. A consultation cannot be archived until both required
+fields are filled.
+
+**New consultation** opens a dialog for the next patient's identity, then clears
+the previous patient's workspace and starts an independent session. Opening a
+stored consultation restores its patient identity together with its transcript,
+planning state and scenarios. Photos, reconstruction, personalization and live
+input from the previous session are cleared, so one patient's work cannot leak
+into another's.
+
+The panel header shows **SQLite database** when the backend is reachable and
+**Browser fallback** when only the on-device IndexedDB cache is available.
 
 Records are written:
 
@@ -415,9 +426,11 @@ Records are written:
 - automatically before **New consultation** discards the current work;
 - on a debounced (1.2 s) save while you are working.
 
-Each record contains the label, timestamps, status, change/scenario counts, full
-model state, Markdown summary, live events, transcript, proposals, timeline
-events and scenarios. **Photographs are never archived.**
+Each record contains the patient/surgeon identity, label, timestamps, status,
+change/scenario counts, full model state, Markdown summary, live events,
+transcript, proposals, timeline events and scenarios. **Photographs are never
+archived.** The list is grouped by patient, using the patient ID when present
+and otherwise the patient name.
 
 From the list you can:
 
@@ -671,6 +684,7 @@ demonstration, not buried in this file.
 | --- | --- |
 | Work disappeared after reload | Open **Previous consultations** and restore the auto-saved record. The live workspace is memory-only, but the archive is written while you work. |
 | Archive is empty | The backend may be offline (the chip shows **Browser fallback**); start uvicorn on port 8000 and press **Refresh archive**. In private mode IndexedDB may also be blocked. |
+| **Archive current** is disabled | Enter the patient name and surgeon in the **Patient & surgeon** panel and make at least one consultation change. Records without an owner are not written. |
 | Panel says **Browser fallback** | The SQLite database is unreachable; records are kept in the browser cache until the backend returns. |
 | "Could not generate the consultation summary" | Try again after a change; if it persists, export the live log instead. |
 | Everything looks reset | Check **Reset simulation** was not pressed; undo history is not recoverable after a reset. |

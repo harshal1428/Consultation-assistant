@@ -88,6 +88,46 @@ describe("ConsultationHistoryPanel", () => {
     expect(onDelete).toHaveBeenCalledWith("z");
   });
 
+  it("groups previous consultations by patient and surgeon", () => {
+    render(
+      <ConsultationHistoryPanel
+        entries={[
+          entry({
+            id: "a1",
+            label: "Consultation 10:30",
+            patientId: "MRN-1001",
+            patientName: "Asha Rao",
+            surgeonName: "Dr. Mehta",
+          }),
+          entry({
+            id: "a2",
+            label: "Consultation 11:15",
+            patientId: "MRN-1001",
+            patientName: "Asha Rao",
+            surgeonName: "Dr. Mehta",
+          }),
+          entry({
+            id: "b1",
+            label: "Consultation 12:00",
+            patientName: "Ravi Kumar",
+            surgeonName: "Dr. Iyer",
+          }),
+        ]}
+        canArchive
+        onArchive={vi.fn()}
+        onRestore={vi.fn()}
+        onDelete={vi.fn()}
+        onClear={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: /Asha Rao/i })).toBeInTheDocument();
+    expect(screen.getByText(/Patient ID: MRN-1001/)).toBeInTheDocument();
+    expect(screen.getByText("2 consultations")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Ravi Kumar/i })).toBeInTheDocument();
+    expect(screen.getByText(/Surgeon: Dr. Iyer/)).toBeInTheDocument();
+  });
+
   it("offers a clear-all action only when entries exist", () => {
     const onClear = vi.fn();
     const { rerender } = render(

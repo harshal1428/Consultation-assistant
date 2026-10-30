@@ -30,6 +30,9 @@ CREATE TABLE IF NOT EXISTS consultations (
     started_at      INTEGER NOT NULL,
     ended_at        INTEGER,
     status          TEXT NOT NULL,
+    patient_id      TEXT NOT NULL DEFAULT '',
+    patient_name    TEXT NOT NULL DEFAULT '',
+    surgeon_name    TEXT NOT NULL DEFAULT '',
     change_count    INTEGER NOT NULL DEFAULT 0,
     scenario_count  INTEGER NOT NULL DEFAULT 0,
     model_state     TEXT NOT NULL,
@@ -82,6 +85,9 @@ def _ensure_columns(conn: sqlite3.Connection) -> None:
     existing = {row[1] for row in conn.execute("PRAGMA table_info(consultations)")}
     additions = {
         "ended_at": "INTEGER",
+        "patient_id": "TEXT NOT NULL DEFAULT ''",
+        "patient_name": "TEXT NOT NULL DEFAULT ''",
+        "surgeon_name": "TEXT NOT NULL DEFAULT ''",
         "personalization": "TEXT",
         "live_events": "TEXT",
         "transcript": "TEXT",
@@ -102,6 +108,12 @@ def connection() -> Iterator[sqlite3.Connection]:
     try:
         conn.executescript(SCHEMA)
         _ensure_columns(conn)
+        # Created after the additive migration so an old database file can gain
+        # the patient columns before the index that references them exists.
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_consultations_patient "
+            "ON consultations (patient_id, saved_at DESC)"
+        )
         yield conn
         conn.commit()
     finally:
@@ -132,6 +144,9 @@ def _row_to_record(row: sqlite3.Row) -> dict[str, Any]:
         "startedAt": row["started_at"],
         "endedAt": row["ended_at"],
         "status": row["status"],
+        "patientId": row["patient_id"],
+        "patientName": row["patient_name"],
+        "surgeonName": row["surgeon_name"],
         "changeCount": row["change_count"],
         "scenarioCount": row["scenario_count"],
         "modelState": _json_loads(row["model_state"]) or {},
@@ -157,6 +172,9 @@ def save_consultation(record: dict[str, Any]) -> dict[str, Any]:
         int(record["startedAt"]),
         record.get("endedAt"),
         record.get("status") or "active",
+        record.get("patientId") or "",
+        record.get("patientName") or "",
+        record.get("surgeonName") or "",
         int(record.get("changeCount") or 0),
         int(record.get("scenarioCount") or 0),
         _json_dumps(record.get("modelState") or {}) or "{}",
@@ -176,16 +194,20 @@ def save_consultation(record: dict[str, Any]) -> dict[str, Any]:
             """
             INSERT INTO consultations (
                 id, label, saved_at, started_at, ended_at, status,
+                patient_id, patient_name, surgeon_name,
                 change_count, scenario_count, model_state, summary,
                 personalization, live_events, transcript, proposals, events,
                 scenarios, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 label           = excluded.label,
                 saved_at        = excluded.saved_at,
                 started_at      = excluded.started_at,
                 ended_at        = excluded.ended_at,
                 status          = excluded.status,
+                patient_id      = excluded.patient_id,
+                patient_name    = excluded.patient_name,
+                surgeon_name    = excluded.surgeon_name,
                 change_count    = excluded.change_count,
                 scenario_count  = excluded.scenario_count,
                 model_state     = excluded.model_state,

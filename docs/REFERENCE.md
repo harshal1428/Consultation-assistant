@@ -592,13 +592,18 @@ rejected ones.
 | `label` | `string` | Display label. |
 | `savedAt` | `number` | Epoch ms; list order is descending. |
 | `startedAt` | `number` | Session start. |
+| `endedAt` | `number \| null` | Session end, when ended. |
 | `status` | `string` | Session status at save time (`active` / `ended`). |
+| `patientId` | `string \| undefined` | Optional patient id/MRN; absent on legacy records. |
+| `patientName` | `string \| undefined` | Patient display name; absent on legacy records. |
+| `surgeonName` | `string \| undefined` | Surgeon responsible for the consultation; absent on legacy records. |
 | `changeCount` | `number` | Number of applied changes. |
 | `scenarioCount` | `number` | Number of saved scenarios. |
 | `modelState` | `ModelState` | Full parameter snapshot. |
 | `summary` | `string` | Markdown report text. |
 | `personalization` | `ArchivedPersonalization \| null` | Optional; absent on pre-photo records. |
 | `liveEvents` | `LiveEvent[]` | Optional change log. |
+| `transcript`, `proposals`, `events`, `scenarios` | session arrays | Optional full narrative snapshot. |
 
 #### `ArchivedPersonalization`
 

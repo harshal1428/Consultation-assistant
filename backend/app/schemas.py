@@ -155,6 +155,9 @@ class ConsultationRecord(BaseModel):
     started_at: int = Field(alias="startedAt")
     ended_at: Optional[int] = Field(default=None, alias="endedAt")
     status: str = "active"
+    patient_id: str = Field(default="", alias="patientId")
+    patient_name: str = Field(default="", alias="patientName")
+    surgeon_name: str = Field(default="", alias="surgeonName")
     change_count: int = Field(default=0, alias="changeCount")
     scenario_count: int = Field(default=0, alias="scenarioCount")
     model_state: Dict[str, Any] = Field(alias="modelState")

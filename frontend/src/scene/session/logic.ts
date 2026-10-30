@@ -495,6 +495,9 @@ export interface ReportInput {
   modelState: ModelState;
   finalScenarioId?: string | null;
   now?: number;
+  patientId?: string;
+  patientName?: string;
+  surgeonName?: string;
 }
 
 /**
@@ -515,6 +518,13 @@ export function buildConsultationReport(input: ReportInput): string {
   lines.push("");
   lines.push(`Generated: ${new Date(now).toLocaleString()}`);
   lines.push(`Session id: ${session.id}`);
+  if (input.patientName?.trim()) {
+    const patientId = input.patientId?.trim();
+    lines.push(`Patient: ${input.patientName.trim()}${patientId ? ` (${patientId})` : ""}`);
+  }
+  if (input.surgeonName?.trim()) {
+    lines.push(`Surgeon: ${input.surgeonName.trim()}`);
+  }
   lines.push(`Started: ${new Date(session.startedAt).toLocaleString()}`);
   lines.push(
     `Ended: ${session.endedAt ? new Date(session.endedAt).toLocaleString() : "in progress"}`,

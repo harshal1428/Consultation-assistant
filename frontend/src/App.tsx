@@ -8,6 +8,8 @@ import { ChangeHistory } from "./components/ChangeHistory";
 import { SessionTimeline } from "./components/SessionTimeline";
 import { ScenarioPanel } from "./components/ScenarioPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
+import { NewConsultationDialog } from "./components/NewConsultationDialog";
+import { PatientContextPanel } from "./components/PatientContextPanel";
 import { StatusMessage } from "./components/StatusMessage";
 import { speechService } from "./services/speech";
 import { parseCommandAPI, checkBackendHealth } from "./services/api";
@@ -58,6 +60,12 @@ import {
 } from "./lib/consultationRepository";
 import type { ConsultationStorage } from "./lib/consultationRepository";
 import type { ArchivedConsultation } from "./lib/historyStore";
+import {
+  EMPTY_PATIENT_IDENTITY,
+  isPatientIdentityComplete,
+  normalizePatientIdentity,
+} from "./lib/patient";
+import type { PatientIdentity } from "./lib/patient";
 import type { ConsultationSession } from "./scene/session/types";
 import { useFacePersonalization } from "./hooks/useFacePersonalization";
 import { useLiveSimulation } from "./hooks/useLiveSimulation";
@@ -80,7 +88,7 @@ import "./App.css";
 /** Number of prior applied instructions sent as conversational context. */
 const CONTEXT_LIMIT = 4;
 
-type DialogKind = "new" | "reset";
+type DialogKind = "reset";
 
 function toContextItem(cmd: Command): ContextItem {
   return {
@@ -123,6 +131,12 @@ function App() {
   const [mode, setMode] = useState<WorkspaceMode>("consultation");
   const [archived, setArchived] = useState<ArchivedConsultation[]>([]);
   const [archiveStorage, setArchiveStorage] = useState<ConsultationStorage>("local");
+  /** Patient and surgeon that the current consultation belongs to. */
+  const [patientIdentity, setPatientIdentity] =
+    useState<PatientIdentity>(EMPTY_PATIENT_IDENTITY);
+  const [newConsultationOpen, setNewConsultationOpen] = useState(false);
+  /** Incremented whenever the workspace is replaced so child-local drafts reset. */
+  const [workspaceEpoch, setWorkspaceEpoch] = useState(0);
 
   const personalization = useFacePersonalization();
 
@@ -164,6 +178,8 @@ function App() {
   sessionRef.current = session;
   const historyRef = useRef(history);
   historyRef.current = history;
+  const patientIdentityRef = useRef(patientIdentity);
+  patientIdentityRef.current = patientIdentity;
   const activeProposalIdRef = useRef(activeProposalId);
   activeProposalIdRef.current = activeProposalId;
 
@@ -251,6 +267,9 @@ function App() {
           history: currentHistory,
           modelState: currentState,
           finalScenarioId: selectedScenarioId,
+          patientId: patientIdentity.patientId,
+          patientName: patientIdentity.patientName,
+          surgeonName: patientIdentity.surgeonName,
         });
       } catch {
         summary = "";
@@ -269,6 +288,9 @@ function App() {
         scenarioCount: source.scenarios.length,
         modelState: currentState,
         summary,
+        patientId: patientIdentity.patientId.trim(),
+        patientName: patientIdentity.patientName.trim(),
+        surgeonName: patientIdentity.surgeonName.trim(),
         personalization: personalization.personalization,
         liveEvents,
         transcript: source.transcript,
@@ -277,7 +299,12 @@ function App() {
         scenarios: source.scenarios,
       };
     },
-    [liveEvents, personalization.personalization, selectedScenarioId],
+    [
+      liveEvents,
+      patientIdentity,
+      personalization.personalization,
+      selectedScenarioId,
+    ],
   );
 
   const saveArchive = useCallback(
@@ -616,13 +643,16 @@ function App() {
     session.scenarios.length > 0 ||
     session.transcript.length > 0 ||
     liveEvents.length > 0;
+  const identityComplete = isPatientIdentityComplete(patientIdentity);
+  const canArchive = hasWork && identityComplete;
 
   // Keep the SQLite archive warm while a consultation is being used. Debounced
   // updates make the current session recoverable after a reload without
-  // writing on every keystroke or vertex update. Explicit archive / end still
-  // write immediately.
+  // writing on every keystroke or vertex update. A record is only written once
+  // the patient and surgeon are known, so no consultation is stored without
+  // its owner. Explicit archive / end still write immediately.
   useEffect(() => {
-    if (!hasWork) return;
+    if (!hasWork || !identityComplete) return;
     const signature = JSON.stringify({
       history,
       scenarios: session.scenarios,
@@ -633,6 +663,7 @@ function App() {
       liveEvents: liveEvents.length,
       selectedScenarioId,
       personalization: personalization.personalization,
+      patientIdentity,
     });
     if (signature === autoArchiveSignatureRef.current) return;
     const timer = window.setTimeout(() => {
@@ -644,7 +675,9 @@ function App() {
     buildArchiveRecord,
     hasWork,
     history,
+    identityComplete,
     liveEvents.length,
+    patientIdentity,
     personalization.personalization,
     saveArchive,
     selectedScenarioId,
@@ -655,25 +688,26 @@ function App() {
     session.transcript,
   ]);
 
-  const doNewConsultation = () => {
-    // Persist the consultation that is about to be discarded. This is what
-    // makes "all consultations" recoverable from the SQLite archive even when
-    // the surgeon did not press Archive explicitly.
-    const current = sessionRef.current;
-    const hasArchivableWork =
-      historyRef.current.length > 0 ||
-      current.scenarios.length > 0 ||
-      current.transcript.length > 0 ||
-      liveEvents.length > 0;
-    if (hasArchivableWork) {
-      void saveArchive(buildArchiveRecord(endSession(current)), false);
-    }
-
+  /**
+   * Clear every piece of state that belongs to one consultation. Used when a
+   * new consultation is created or a stored one is opened, so patient A's
+   * photos, personalization, proposals, live log and pending speech can never
+   * leak into patient B's session.
+   */
+  const resetWorkspaceState = () => {
     stopListeningIfActive();
     live.stop();
+    live.clearError();
     reqRef.current += 1; // Invalidate any in-flight parse.
     liveTokenRef.current += 1; // Invalidate any in-flight live parse.
     appliedRef.current = new Set();
+    seqRef.current = 0;
+    skinTextureRequest.current += 1; // Discard a late photo-texture result.
+
+    // Photos and their derived personalization are consultation-scoped.
+    photos.clearAllPhotos();
+    personalization.remove();
+
     setSession(createSession());
     setHistory([]);
     setLiveEvents([]);
@@ -683,14 +717,50 @@ function App() {
     setTranscript("");
     setSpeechError("");
     setApiError("");
-    live.clearError();
-    setIsProcessing(false); // A superseded parse no longer owns the busy flag.
+    setIsListening(false);
+    setIsProcessing(false);
+    setShowPhotoManager(false);
+    setShowReconstructionPanel(false);
+    setReconstructedMorph(null);
+    setPersonalizedModel(null);
+    setPersonalizedTexture(null);
+    setReconstructionPhotoVersion(null);
+    setNotice("");
     setDialog(null);
+    setNewConsultationOpen(false);
+    setWorkspaceEpoch((epoch) => epoch + 1);
+    autoArchiveSignatureRef.current = "";
+  };
+
+  const doNewConsultation = (identity: PatientIdentity) => {
+    // Persist the consultation that is about to be discarded. This is what
+    // makes "all consultations" recoverable from the SQLite archive even when
+    // the surgeon did not press Archive explicitly.
+    const current = sessionRef.current;
+    const currentIdentity = patientIdentityRef.current;
+    const hasArchivableWork =
+      historyRef.current.length > 0 ||
+      current.scenarios.length > 0 ||
+      current.transcript.length > 0 ||
+      liveEvents.length > 0;
+    const shouldArchive =
+      hasArchivableWork && isPatientIdentityComplete(currentIdentity);
+    if (shouldArchive) {
+      void saveArchive(buildArchiveRecord(endSession(current)), false);
+    }
+
+    resetWorkspaceState();
+    setPatientIdentity(normalizePatientIdentity(identity));
+    if (hasArchivableWork && !shouldArchive) {
+      setNotice(
+        "The previous consultation was not archived because its patient name or surgeon was missing.",
+      );
+    }
   };
 
   const handleNewConsultation = () => {
-    if (hasWork) setDialog("new");
-    else doNewConsultation();
+    stopListeningIfActive();
+    setNewConsultationOpen(true);
   };
 
   const doResetSimulation = () => {
@@ -740,14 +810,22 @@ function App() {
     setActiveProposalId(null);
     setEditingIndex(null);
 
-    // Ending a consultation automatically stores it in the archive.
+    // Ending a consultation automatically stores it in the archive, provided
+    // the record has an owner. If not, the work stays in the workspace so the
+    // surgeon can complete the patient details and archive explicitly.
     if (
       historyRef.current.length > 0 ||
       ended.scenarios.length > 0 ||
       ended.transcript.length > 0 ||
       liveEvents.length > 0
     ) {
-      void saveArchive(buildArchiveRecord(ended), false);
+      if (isPatientIdentityComplete(patientIdentityRef.current)) {
+        void saveArchive(buildArchiveRecord(ended), false);
+      } else {
+        setNotice(
+          "Consultation ended but not archived: enter the patient name and surgeon, then use Archive current.",
+        );
+      }
     }
   };
 
@@ -826,6 +904,9 @@ function App() {
         history: historyRef.current,
         modelState,
         finalScenarioId: selectedScenarioId,
+        patientId: patientIdentity.patientId,
+        patientName: patientIdentity.patientName,
+        surgeonName: patientIdentity.surgeonName,
       });
       const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
       const url = URL.createObjectURL(blob);
@@ -841,6 +922,10 @@ function App() {
   };
 
   const handleArchiveConsultation = async () => {
+    if (!isPatientIdentityComplete(patientIdentityRef.current)) {
+      setNotice("Enter the patient name and surgeon before archiving this consultation.");
+      return;
+    }
     const record = buildArchiveRecord(sessionRef.current);
     const result = await saveArchive(record, true);
     setSession((prev) =>
@@ -858,52 +943,40 @@ function App() {
   const handleRestoreArchived = (id: string) => {
     const record = archived.find((entry) => entry.id === id);
     if (!record) return;
+
+    // Replace, rather than merge, every consultation-scoped state. This is the
+    // data-isolation boundary between one patient and another.
+    resetWorkspaceState();
+    setPatientIdentity({
+      patientId: record.patientId?.trim() ?? "",
+      patientName: record.patientName?.trim() ?? "",
+      surgeonName: record.surgeonName?.trim() ?? "",
+    });
     setHistory(stateToCommands(record.modelState));
     setLiveEvents(record.liveEvents ?? []);
     if (record.personalization) {
       personalization.applyPersonalization(record.personalization);
     }
-    setSelectedScenarioId(null);
-    setActiveProposalId(null);
-    setEditingIndex(null);
 
-    // Restore the full narrative when the record carries it. Older archives
-    // only contain the model state, so they keep the current session shell.
-    const hasNarrative =
-      record.transcript !== undefined ||
-      record.events !== undefined ||
-      record.scenarios !== undefined ||
-      record.proposals !== undefined;
-
-    if (hasNarrative) {
-      const restored: ConsultationSession = {
-        // Keep the archive id so continuing a restored consultation updates the
-        // existing record instead of creating a duplicate.
-        id: record.id,
-        startedAt: record.startedAt,
-        endedAt: null,
-        status: "active",
-        transcript: record.transcript ?? [],
-        proposals: record.proposals ?? [],
-        events: record.events ?? [],
-        scenarios: record.scenarios ?? [],
-      };
-      setSession(
-        appendEvent(restored, {
-          type: "consultation_restored",
-          label: "Consultation restored",
-          detail: record.label,
-        }),
-      );
-    } else {
-      setSession((prev) =>
-        appendEvent(prev, {
-          type: "consultation_restored",
-          label: "Consultation restored",
-          detail: record.label,
-        }),
-      );
-    }
+    const restored: ConsultationSession = {
+      // Keep the archive id so continuing a restored consultation updates the
+      // existing record instead of creating a duplicate.
+      id: record.id,
+      startedAt: record.startedAt,
+      endedAt: null,
+      status: "active",
+      transcript: record.transcript ?? [],
+      proposals: record.proposals ?? [],
+      events: record.events ?? [],
+      scenarios: record.scenarios ?? [],
+    };
+    setSession(
+      appendEvent(restored, {
+        type: "consultation_restored",
+        label: "Consultation restored",
+        detail: record.label,
+      }),
+    );
     setNotice(`Restored ${record.label}.`);
   };
 
@@ -1027,6 +1100,9 @@ function App() {
         sessionStatus={session.status}
         backendOnline={backendOnline}
         canReset={history.length > 0}
+        patientName={patientIdentity.patientName}
+        patientId={patientIdentity.patientId}
+        surgeonName={patientIdentity.surgeonName}
         mode={mode}
         onModeChange={setMode}
         onNewConsultation={handleNewConsultation}
@@ -1044,6 +1120,7 @@ function App() {
         <div className={`layout layout--${mode}`}>
           <div className="layout__main">
             <SimulationWorkspace
+              key={`workspace-${workspaceEpoch}`}
               modelState={modelState}
               scenarios={session.scenarios}
               personalization={personalization.personalization}
@@ -1063,6 +1140,7 @@ function App() {
               <>
                 <SessionTimeline events={session.events} />
                 <ScenarioPanel
+                  key={`scenarios-${workspaceEpoch}`}
                   scenarios={session.scenarios}
                   selectedId={selectedScenarioId}
                   modelState={modelState}
@@ -1075,7 +1153,7 @@ function App() {
                 />
                 <ConsultationHistoryPanel
                   entries={archived}
-                  canArchive={hasWork}
+                  canArchive={canArchive}
                   storage={archiveStorage}
                   onArchive={handleArchiveConsultation}
                   onRestore={handleRestoreArchived}
@@ -1088,8 +1166,10 @@ function App() {
           </div>
 
           <div className="layout__side">
+            <PatientContextPanel identity={patientIdentity} onChange={setPatientIdentity} />
             {mode === "live" && !showConsultationPanel ? (
               <LiveSimulationPanel
+                key={`live-${workspaceEpoch}`}
                 status={live.status}
                 supported={live.supported}
                 sessionActive={sessionActive}
@@ -1105,6 +1185,7 @@ function App() {
             ) : null}
             {showConsultationPanel ? (
             <ConsultationPanel
+              key={`consultation-${session.id}-${workspaceEpoch}`}
               isListening={isListening}
               speechSupported={speechService.isSupported}
               phase={phase}
@@ -1143,18 +1224,15 @@ function App() {
         </div>
       </main>
 
-      <ConfirmDialog
-        open={dialog === "new"}
-        title="Start a new consultation?"
-        danger
-        confirmLabel="Discard and start new"
-        onCancel={() => setDialog(null)}
+      <NewConsultationDialog
+        open={newConsultationOpen}
+        initialSurgeon={patientIdentity.surgeonName}
+        hasCurrentWork={hasWork}
+        currentCanBeArchived={canArchive}
+        currentPatientName={patientIdentity.patientName}
+        onCancel={() => setNewConsultationOpen(false)}
         onConfirm={doNewConsultation}
-      >
-        The current consultation is saved to the local SQLite archive first. Starting a new one
-        then clears the in-memory transcript, change history and saved scenarios from the
-        workspace. You can restore the archived copy from “Previous consultations”.
-      </ConfirmDialog>
+      />
 
       <ConfirmDialog
         open={dialog === "reset"}
