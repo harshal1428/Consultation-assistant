@@ -8,49 +8,52 @@
     "false_commit_rate": 0.0,
     "false_commit_rows": [],
     "false_commits": 0,
-    "missed_commit_rate": 0.26,
+    "missed_commit_rate": 0.29,
     "missed_commit_rows": [
+      "sess3:1",
+      "sess8:1",
       "sess15:1",
+      "sess20:1",
+      "sess103:1",
       "sess104:1",
       "sess106:1",
       "sess107:1",
       "sess108:1",
       "sess109:1",
       "sess110:1",
-      "sess123:1",
-      "sess140:1",
+      "sess124:1",
       "sess143:1",
-      "sess157:1",
-      "sess166:1",
+      "sess160:1",
       "sess167:1",
+      "sess168:1",
+      "sess174:1",
       "sess216:1",
+      "sess217:1",
       "sess219:1",
       "sess220:1",
       "sess221:1",
       "sess222:1",
       "sess223:1",
-      "sess224:1",
       "sess225:1",
-      "sess242:1",
       "sess246:1",
       "sess248:1",
       "sess249:1",
       "sess250:1"
     ],
-    "missed_commits": 26,
-    "applied_command_rows": 74,
+    "missed_commits": 29,
+    "applied_command_rows": 71,
     "wrong_execution_rate": 0.13,
     "wrong_execution_rows": [
       "sess11:1",
-      "sess59:1",
+      "sess57:1",
       "sess60:1",
       "sess101:1",
       "sess102:1",
-      "sess103:1",
       "sess212:1",
       "sess213:1",
       "sess214:1",
       "sess241:1",
+      "sess242:1",
       "sess243:1",
       "sess244:1",
       "sess245:1"
@@ -58,34 +61,34 @@
     "wrong_executions": 13,
     "slot_accuracy": {
       "parameter": {
-        "correct": 75,
-        "total": 102,
-        "accuracy": 0.7352941176470589
+        "correct": 74,
+        "total": 103,
+        "accuracy": 0.7184466019417476
       },
       "direction": {
-        "correct": 80,
-        "total": 102,
-        "accuracy": 0.7843137254901961
+        "correct": 77,
+        "total": 103,
+        "accuracy": 0.7475728155339806
       },
       "side": {
-        "correct": 89,
-        "total": 102,
-        "accuracy": 0.8725490196078431
+        "correct": 87,
+        "total": 103,
+        "accuracy": 0.8446601941747572
       },
       "value": {
-        "correct": 75,
-        "total": 102,
-        "accuracy": 0.7352941176470589
+        "correct": 76,
+        "total": 103,
+        "accuracy": 0.7378640776699029
       },
       "unit": {
-        "correct": 85,
-        "total": 102,
-        "accuracy": 0.8333333333333334
+        "correct": 83,
+        "total": 103,
+        "accuracy": 0.8058252427184466
       }
     },
-    "command_slot_accuracy": 0.6862745098039216,
-    "mean_abs_value_error_mm": 0.10126582278481013,
-    "value_error_n": 79,
+    "command_slot_accuracy": 0.6699029126213593,
+    "mean_abs_value_error_mm": 0.06493506493506493,
+    "value_error_n": 77,
     "speech_act_accuracy": null,
     "speech_act_note": "N/A: the current API does not expose a speech-act field; the commitment gate is a later milestone."
   },
@@ -97,76 +100,73 @@
       "false_commit_rate": 0.0,
       "false_commit_rows": [],
       "false_commits": 0,
-      "missed_commit_rate": 0.3,
+      "missed_commit_rate": 0.2714285714285714,
       "missed_commit_rows": [
         "sess15:1",
+        "sess103:1",
         "sess104:1",
         "sess106:1",
         "sess107:1",
         "sess108:1",
         "sess109:1",
         "sess110:1",
-        "sess123:1",
         "sess143:1",
-        "sess157:1",
-        "sess166:1",
         "sess167:1",
         "sess216:1",
+        "sess217:1",
         "sess219:1",
         "sess220:1",
         "sess221:1",
         "sess223:1",
-        "sess242:1",
         "sess246:1",
         "sess249:1",
         "sess250:1"
       ],
-      "missed_commits": 21,
-      "applied_command_rows": 49,
-      "wrong_execution_rate": 0.14285714285714285,
+      "missed_commits": 19,
+      "applied_command_rows": 51,
+      "wrong_execution_rate": 0.12857142857142856,
       "wrong_execution_rows": [
         "sess11:1",
-        "sess59:1",
         "sess60:1",
         "sess101:1",
-        "sess103:1",
         "sess212:1",
         "sess214:1",
         "sess241:1",
+        "sess242:1",
         "sess244:1",
         "sess245:1"
       ],
-      "wrong_executions": 10,
+      "wrong_executions": 9,
       "slot_accuracy": {
         "parameter": {
-          "correct": 49,
-          "total": 70,
-          "accuracy": 0.7
+          "correct": 54,
+          "total": 76,
+          "accuracy": 0.7105263157894737
         },
         "direction": {
-          "correct": 53,
-          "total": 70,
-          "accuracy": 0.7571428571428571
+          "correct": 56,
+          "total": 76,
+          "accuracy": 0.7368421052631579
         },
         "side": {
-          "correct": 59,
-          "total": 70,
-          "accuracy": 0.8428571428571429
+          "correct": 64,
+          "total": 76,
+          "accuracy": 0.8421052631578947
         },
         "value": {
-          "correct": 51,
-          "total": 70,
-          "accuracy": 0.7285714285714285
+          "correct": 58,
+          "total": 76,
+          "accuracy": 0.7631578947368421
         },
         "unit": {
-          "correct": 57,
-          "total": 70,
-          "accuracy": 0.8142857142857143
+          "correct": 62,
+          "total": 76,
+          "accuracy": 0.8157894736842105
         }
       },
-      "command_slot_accuracy": 0.6571428571428571,
-      "mean_abs_value_error_mm": 0.08490566037735849,
-      "value_error_n": 53,
+      "command_slot_accuracy": 0.6710526315789473,
+      "mean_abs_value_error_mm": 0.05172413793103448,
+      "value_error_n": 58,
       "speech_act_accuracy": null,
       "speech_act_note": "N/A: the current API does not expose a speech-act field; the commitment gate is a later milestone."
     },
@@ -177,53 +177,59 @@
       "false_commit_rate": 0.0,
       "false_commit_rows": [],
       "false_commits": 0,
-      "missed_commit_rate": 0.16666666666666666,
+      "missed_commit_rate": 0.3333333333333333,
       "missed_commit_rows": [
-        "sess140:1",
+        "sess3:1",
+        "sess8:1",
+        "sess20:1",
+        "sess124:1",
+        "sess160:1",
+        "sess168:1",
+        "sess174:1",
         "sess222:1",
-        "sess224:1",
         "sess225:1",
         "sess248:1"
       ],
-      "missed_commits": 5,
-      "applied_command_rows": 25,
-      "wrong_execution_rate": 0.1,
+      "missed_commits": 10,
+      "applied_command_rows": 20,
+      "wrong_execution_rate": 0.13333333333333333,
       "wrong_execution_rows": [
+        "sess57:1",
         "sess102:1",
         "sess213:1",
         "sess243:1"
       ],
-      "wrong_executions": 3,
+      "wrong_executions": 4,
       "slot_accuracy": {
         "parameter": {
-          "correct": 26,
-          "total": 32,
-          "accuracy": 0.8125
+          "correct": 20,
+          "total": 27,
+          "accuracy": 0.7407407407407407
         },
         "direction": {
-          "correct": 27,
-          "total": 32,
-          "accuracy": 0.84375
+          "correct": 21,
+          "total": 27,
+          "accuracy": 0.7777777777777778
         },
         "side": {
-          "correct": 30,
-          "total": 32,
-          "accuracy": 0.9375
+          "correct": 23,
+          "total": 27,
+          "accuracy": 0.8518518518518519
         },
         "value": {
-          "correct": 24,
-          "total": 32,
-          "accuracy": 0.75
+          "correct": 18,
+          "total": 27,
+          "accuracy": 0.6666666666666666
         },
         "unit": {
-          "correct": 28,
-          "total": 32,
-          "accuracy": 0.875
+          "correct": 21,
+          "total": 27,
+          "accuracy": 0.7777777777777778
         }
       },
-      "command_slot_accuracy": 0.75,
-      "mean_abs_value_error_mm": 0.1346153846153846,
-      "value_error_n": 26,
+      "command_slot_accuracy": 0.6666666666666666,
+      "mean_abs_value_error_mm": 0.10526315789473684,
+      "value_error_n": 19,
       "speech_act_accuracy": null,
       "speech_act_note": "N/A: the current API does not expose a speech-act field; the commitment gate is a later milestone."
     }
@@ -243,36 +249,36 @@
     },
     "direct_command": {
       "rows": 100,
-      "missed_commit_rate": 0.26,
+      "missed_commit_rate": 0.29,
       "wrong_execution_rate": 0.13,
       "slot_accuracy": {
         "parameter": {
-          "correct": 75,
-          "total": 102,
-          "accuracy": 0.7352941176470589
+          "correct": 74,
+          "total": 103,
+          "accuracy": 0.7184466019417476
         },
         "direction": {
-          "correct": 80,
-          "total": 102,
-          "accuracy": 0.7843137254901961
+          "correct": 77,
+          "total": 103,
+          "accuracy": 0.7475728155339806
         },
         "side": {
-          "correct": 89,
-          "total": 102,
-          "accuracy": 0.8725490196078431
+          "correct": 87,
+          "total": 103,
+          "accuracy": 0.8446601941747572
         },
         "value": {
-          "correct": 75,
-          "total": 102,
-          "accuracy": 0.7352941176470589
+          "correct": 76,
+          "total": 103,
+          "accuracy": 0.7378640776699029
         },
         "unit": {
-          "correct": 85,
-          "total": 102,
-          "accuracy": 0.8333333333333334
+          "correct": 83,
+          "total": 103,
+          "accuracy": 0.8058252427184466
         }
       },
-      "mean_abs_value_error_mm": 0.10126582278481013
+      "mean_abs_value_error_mm": 0.06493506493506493
     },
     "proposal": {
       "rows": 59,
@@ -307,8 +313,8 @@
   },
   "confusion_matrix": {
     "command": {
-      "command": 74,
-      "ignored": 26
+      "command": 71,
+      "ignored": 29
     },
     "confirm": {
       "confirm": 8

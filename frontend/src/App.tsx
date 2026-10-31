@@ -51,6 +51,7 @@ import {
 import type { InputSource } from "./scene/session";
 import { isTerminalProposal } from "./scene/session";
 import { descriptorFor } from "./lib/params";
+import { buildTextPdf } from "./scene/live/logic";
 import { formatParameter, formatTarget, formatUnit } from "./lib/format";
 import {
   clearConsultationArchive,
@@ -96,6 +97,7 @@ function toContextItem(cmd: Command): ContextItem {
   return {
     target: cmd.target,
     parameter: cmd.parameter,
+    clinical_parameter: cmd.clinical_parameter ?? null,
     operation: cmd.operation,
     value: cmd.value,
     unit: cmd.unit,
@@ -139,6 +141,7 @@ function App() {
   const [newConsultationOpen, setNewConsultationOpen] = useState(false);
   /** Incremented whenever the workspace is replaced so child-local drafts reset. */
   const [workspaceEpoch, setWorkspaceEpoch] = useState(0);
+  const [liveAutoApply, setLiveAutoApply] = useState(true);
 
   const personalization = useFacePersonalization();
 
@@ -411,10 +414,9 @@ function App() {
     const trimmed = text.trim();
     if (!trimmed || sessionRef.current.status !== "active") return;
 
-    // Voice is deliberately review-first by default. Typed live commands keep
-    // their explicit auto-apply behaviour; set VITE_VOICE_AUTOAPPLY=true to
-    // restore voice auto-apply during a supervised simulation.
-    if (source === "live_voice" && !VOICE_AUTOAPPLY) {
+    // Respect UI toggle for live simulation. Fallback to env var if needed.
+    const effectiveAutoApply = modeRef.current === "live" ? liveAutoApply : VOICE_AUTOAPPLY;
+    if (source === "live_voice" && !effectiveAutoApply) {
       await parseText(trimmed, "voice");
       return;
     }
@@ -984,6 +986,34 @@ function App() {
     }
   };
 
+  const handleSaveReportPdf = () => {
+    try {
+      const report = buildConsultationReport({
+        session: sessionRef.current,
+        history: historyRef.current,
+        modelState,
+        finalScenarioId: selectedScenarioId,
+        patientId: patientIdentity.patientId,
+        patientName: patientIdentity.patientName,
+        surgeonName: patientIdentity.surgeonName,
+      });
+      const pdf = buildTextPdf(
+        report.split(/\r?\n/),
+        "VoiceSurg 3D - Consultation report",
+      );
+      const blob = new Blob([pdf], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `VoiceSurg_Consultation_${sessionRef.current.id}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setNotice("Consultation PDF downloaded.");
+    } catch {
+      setNotice("Could not generate the consultation PDF.");
+    }
+  };
+
   const handleArchiveConsultation = async () => {
     if (!isPatientIdentityComplete(patientIdentityRef.current)) {
       setNotice("Enter the patient name and surgeon before archiving this consultation.");
@@ -1197,6 +1227,7 @@ function App() {
               history={history}
               onUndo={handleUndo}
               onSaveReport={handleSaveReport}
+              onSavePdf={handleSaveReportPdf}
               onReset={handleResetSimulation}
             />
             {mode === "consultation" ? (
@@ -1248,13 +1279,15 @@ function App() {
                 serverState={VOICE_MODE === "server" ? serverLive.serverState : undefined}
                 pttActive={VOICE_MODE === "server" ? serverLive.pttActive : false}
                 muted={VOICE_MODE === "server" ? serverLive.muted : false}
-                autoApply={VOICE_AUTOAPPLY}
+                autoApply={liveAutoApply}
                 lastFinal={VOICE_MODE === "server" ? serverLive.lastFinal : null}
                 lastDiscard={VOICE_MODE === "server" ? serverLive.lastDiscard : null}
                 onPttStart={VOICE_MODE === "server" ? serverLive.pttStart : undefined}
                 onPttEnd={VOICE_MODE === "server" ? serverLive.pttEnd : undefined}
                 onToggleMute={VOICE_MODE === "server" ? serverLive.toggleMute : undefined}
                 devTools={VOICE_DEV_TOOLS}
+                autoApplyEnabled={liveAutoApply}
+                onToggleAutoApply={() => setLiveAutoApply((v) => !v)}
               />
             ) : null}
             {showConsultationPanel ? (

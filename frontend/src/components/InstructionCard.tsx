@@ -8,10 +8,14 @@ import { Icon } from "./Icon";
 import { StatusMessage } from "./StatusMessage";
 import {
   REGION_OPTIONS,
-  paramKeyFor,
+  paramKeyForInstruction,
   parameterLabel,
   parametersForRegion,
 } from "../lib/params";
+import {
+  clinicalParameterFor,
+  simulationStatusLabel,
+} from "../lib/clinicalRegistry";
 import {
   confidenceLevel,
   describeCommand,
@@ -53,6 +57,8 @@ export function InstructionCard({
   const valueMissing = command.value === null;
   const confidence = confidenceLevel(command.confidence);
   const requested = describeRequested(command);
+  const clinical = clinicalParameterFor(command.clinical_parameter);
+  const simulated = paramKeyForInstruction(command) !== null;
 
   const statusVariant =
     meta.tone === "warning"
@@ -67,7 +73,7 @@ export function InstructionCard({
   const saveEdits = () => {
     const resolvable =
       command.value !== null &&
-      paramKeyFor(command.target, command.parameter) !== null;
+      paramKeyForInstruction(command) !== null;
     if (resolvable && (command.status === "needs_clarification" || command.status === "unsupported")) {
       onPatch({ status: "ok", adjusted_value: null, reason: null });
     }
@@ -115,7 +121,7 @@ export function InstructionCard({
                     command.parameter && options.includes(command.parameter)
                       ? command.parameter
                       : options[0] ?? null;
-                  onPatch({ target: region, parameter });
+                  onPatch({ target: region, parameter, clinical_parameter: null });
                 }}
               >
                 {command.target === null ? <option value="">Select region…</option> : null}
@@ -143,7 +149,12 @@ export function InstructionCard({
                 className="select select--sm"
                 aria-label="Parameter"
                 value={command.parameter ?? ""}
-                onChange={(e) => onPatch({ parameter: e.target.value as Parameter })}
+                onChange={(e) =>
+                  onPatch({
+                    parameter: e.target.value as Parameter,
+                    clinical_parameter: null,
+                  })
+                }
               >
                 {command.parameter === null ? <option value="">Select…</option> : null}
                 {parametersForRegion(command.target ?? "nasal_bridge").map((p) => (
@@ -154,6 +165,27 @@ export function InstructionCard({
               </select>
             ) : (
               formatParameter(command.parameter)
+            )}
+          </dd>
+        </div>
+
+        <div className="intent-review__row">
+          <dt>Clinical concept</dt>
+          <dd>
+            {clinical ? (
+              <span>
+                {clinical.clinicalName}{" "}
+                <span
+                  className={`chip ${simulated ? "chip--ok" : "chip--warning"}`}
+                  title={clinical.limitations}
+                >
+                  {simulationStatusLabel(clinical.simulation.status)}
+                </span>
+              </span>
+            ) : (
+              <span className="intent-review__muted">
+                Not linked to a registered concept
+              </span>
             )}
           </dd>
         </div>

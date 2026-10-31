@@ -1,6 +1,10 @@
 import type { Command, ModelState, ParamKey } from "./types";
 import { initialModelState } from "./types";
-import { paramKeyFor, descriptorFor } from "../../lib/params";
+import {
+  descriptorFor,
+  paramKeyFor,
+  paramKeyForInstruction,
+} from "../../lib/params";
 
 /**
  * ---------------------------------------------------------------------------
@@ -53,7 +57,7 @@ export function applyCommand(state: ModelState, command: Command): ModelState {
     return newState;
   }
 
-  const field = paramKeyFor(command.target, command.parameter);
+  const field = paramKeyForInstruction(command);
   if (!field) {
     return newState;
   }
@@ -85,6 +89,7 @@ export function createManualCommand(key: ParamKey, value: number): Command {
     source: "manual",
     target: d.target,
     parameter: d.parameter,
+    clinical_parameter: d.clinicalKey,
     operation: value >= 0 ? "increase" : "decrease",
     value,
     requested_value: value,

@@ -19,6 +19,10 @@ from .schemas import (
     TargetRegion,
     Unit,
 )
+from .clinical_registry import (
+    get_clinical_parameter,
+    match_clinical_parameter,
+)
 from .validation import build_instruction, canonical_unit_for
 
 # ---------------------------------------------------------------------------
@@ -107,18 +111,31 @@ CORRECTION_CUE = re.compile(
     r"\b(?:actually|instead|rather|i mean|sorry|no wait|make that|change that|make it)\b", re.I
 )
 
-OP_INCREASE = re.compile(r"\b(increase|raise|lift|augment|boost|add|gain|higher|project)\b", re.I)
-OP_DECREASE = re.compile(r"\b(decrease|lower|reduce|shorten|subtract|minimi[sz]e|take\b.*\boff|down)\b", re.I)
+OP_INCREASE = re.compile(
+    r"\b(increase|raise|lift|elevate|augment|advance|boost|add|gain|plump|fill|"
+    r"open|deepen|lengthen|higher|project)\b",
+    re.I,
+)
+OP_DECREASE = re.compile(
+    r"\b(decrease|lower|reduce|shorten|subtract|minimi[sz]e|deproject|retract|"
+    r"deflate|close|take\b.*\boff|down)\b",
+    re.I,
+)
 OP_NARROW = re.compile(r"\b(narrow|narrower|pinch|thinner)\b", re.I)
 OP_WIDEN = re.compile(r"\b(widen|wider|broaden|broader)\b", re.I)
-OP_ROTATE = re.compile(r"\b(rotate|rotation|rotated|angle|tilt)\b", re.I)
+# "angle" is a noun in "nasolabial angle" and must not force a rotation
+# operation. Only explicit rotation verbs imply rotation.
+OP_ROTATE = re.compile(r"\b(rotate|rotation|rotated|tilt)\b", re.I)
 
 DIR_UP = re.compile(r"\b(up|upward|upwards|cephalic|superior|higher)\b", re.I)
 DIR_DOWN = re.compile(r"\b(down|downward|downwards|caudal|inferior|lower)\b", re.I)
 
 PARAM_HEIGHT = re.compile(r"\b(height|high|projection of the height)\b", re.I)
 PARAM_WIDTH = re.compile(r"\b(width|wide|wideness|breadth)\b", re.I)
-PARAM_PROJECTION = re.compile(r"\b(projection|project|projected|projecting|forward)\b", re.I)
+PARAM_PROJECTION = re.compile(
+    r"\b(projection|project|projected|projecting|deproject|deprojection|forward)\b",
+    re.I,
+)
 PARAM_ROTATION = re.compile(r"\b(rotation|rotate|rotated|angle|tilt)\b", re.I)
 PARAM_FULLNESS = re.compile(
     r"\b(fullness|full|fuller|plump|plumpness|volume|pout|prominence|prominent)\b", re.I
@@ -364,6 +381,7 @@ def _parse_clause(text: str, context: List[ContextItem], previous: Optional[Dict
     raw: Dict = {
         "target": None,
         "parameter": None,
+        "clinical_parameter": None,
         "operation": None,
         "value": None,
         "unit": None,
@@ -416,13 +434,34 @@ def _parse_clause(text: str, context: List[ContextItem], previous: Optional[Dict
         raw["_unsupported"] = (
             f"The '{unsupported}' region is not supported in this prototype "
             f"(supported: nasal bridge, dorsum, tip, nostrils, upper/lower lip, "
-            f"chin, jawline, cheeks)."
+            f"chin, jawline, cheeks, face)."
         )
         raw["confidence"] = 0.4
         return raw
 
+    # Resolve the precise clinical concept before the coarse target/parameter
+    # guess. Equal-length matches are a real ambiguity and must be clarified;
+    # they must never collapse into a similar simulated parameter.
+    clinical_match = match_clinical_parameter(clause)
+    clinical_key: Optional[str] = None
+    if clinical_match.ambiguous:
+        raw["_ambiguous"] = (
+            "More than one clinical parameter matches this phrase "
+            f"({', '.join(clinical_match.candidates)}). Please name the "
+            "parameter more specifically."
+        )
+        raw["confidence"] = 0.35
+        return raw
+    if clinical_match.key:
+        clinical_key = clinical_match.key
+        clinical = get_clinical_parameter(clinical_key)
+        if clinical is not None:
+            target = clinical.parser_target
+        raw["clinical_parameter"] = clinical_key
+    raw["_clinical_match_length"] = clinical_match.length
+
     # A bare "lip"/"lips" is genuinely ambiguous between the upper and lower lip.
-    if target is None and re.search(r"\blips?\b", clause, re.I):
+    if clinical_key is None and target is None and re.search(r"\blips?\b", clause, re.I):
         raw["_ambiguous"] = (
             "Specify whether the upper or lower lip is intended "
             "(for example: upper lip or lower lip)."
@@ -438,6 +477,10 @@ def _parse_clause(text: str, context: List[ContextItem], previous: Optional[Dict
     operation = _detect_operation(verb_working)
     direction = _detect_direction(verb_clause)
     parameter = _detect_parameter(clause, operation, target)
+    if clinical_key:
+        clinical = get_clinical_parameter(clinical_key)
+        if clinical is not None:
+            parameter = clinical.parser_parameter
     value, unit = _extract_amount(clause)
 
     # Context resolution: pronouns / corrections inherit the previous target.
@@ -449,6 +492,9 @@ def _parse_clause(text: str, context: List[ContextItem], previous: Optional[Dict
                 parameter = _safe_parameter(previous.get("parameter"))
             if operation is None:
                 operation = _safe_operation(previous.get("operation"))
+            if clinical_key is None:
+                clinical_key = previous.get("clinical_parameter")
+                raw["clinical_parameter"] = clinical_key
             raw["_supersedes"] = True
             resolved_from_context = True
             raw["confidence"] = 0.6
@@ -459,6 +505,9 @@ def _parse_clause(text: str, context: List[ContextItem], previous: Optional[Dict
                 parameter = antecedent.parameter
             if operation is None:
                 operation = antecedent.operation
+            if clinical_key is None:
+                clinical_key = antecedent.clinical_parameter
+                raw["clinical_parameter"] = clinical_key
             resolved_from_context = True
             raw["confidence"] = 0.65
         else:
@@ -556,7 +605,7 @@ def flag_contradictions(instructions: List[Instruction]) -> List[Instruction]:
     for idx, ins in enumerate(instructions):
         if ins.status != InstructionStatus.ok or ins.value is None:
             continue
-        key = (ins.target, ins.parameter)
+        key = (ins.target, ins.parameter, ins.clinical_parameter)
         groups.setdefault(key, []).append(idx)
 
     for indices in groups.values():
@@ -658,6 +707,7 @@ def parse_text(text: str, context: Optional[List[ContextItem]] = None) -> List[I
                 Instruction(
                     target=target,
                     parameter=None,
+                    clinical_parameter=raw.get("clinical_parameter"),
                     operation=None,
                     value=None,
                     unit=None,
@@ -674,6 +724,7 @@ def parse_text(text: str, context: Optional[List[ContextItem]] = None) -> List[I
             instructions.append(
                 Instruction(
                     target=_safe_target(raw["target"])[0],
+                    clinical_parameter=raw.get("clinical_parameter"),
                     confidence=raw["confidence"],
                     requires_confirmation=False,
                     status=InstructionStatus.unsupported,
@@ -687,6 +738,14 @@ def parse_text(text: str, context: Optional[List[ContextItem]] = None) -> List[I
             instructions.append(
                 Instruction(
                     target=_safe_target(raw["target"])[0],
+                    parameter=_safe_parameter(raw.get("parameter")),
+                    clinical_parameter=raw.get("clinical_parameter"),
+                    operation=_safe_operation(raw.get("operation")),
+                    value=raw.get("value"),
+                    requested_value=raw.get("requested_value"),
+                    requested_unit=_safe_unit(raw.get("requested_unit")),
+                    unit=_safe_unit(raw.get("unit")),
+                    direction=raw.get("direction"),
                     confidence=raw["confidence"],
                     requires_confirmation=False,
                     status=InstructionStatus.needs_clarification,
@@ -747,5 +806,14 @@ def _safe_operation(value) -> Optional[Operation]:
         return None
     try:
         return Operation(value)
+    except ValueError:
+        return None
+
+
+def _safe_unit(value) -> Optional[Unit]:
+    if not value:
+        return None
+    try:
+        return Unit(value)
     except ValueError:
         return None

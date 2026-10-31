@@ -60,6 +60,9 @@ class FasterWhisperBackend:
             "word_timestamps": True,
             "condition_on_previous_text": False,
             "vad_filter": False,
+            "no_speech_threshold": 0.6,
+            "log_prob_threshold": -1.0,
+            "compression_ratio_threshold": 2.4,
         }
 
     def _transcribe_with_hotwords(self, audio):
@@ -69,10 +72,12 @@ class FasterWhisperBackend:
             try:
                 return self._model.transcribe(audio, hotwords=hotwords, **kwargs)
             except TypeError:
-                # Older faster-whisper releases do not expose ``hotwords``.
-                # initial_prompt is the documented fallback; it is weaker and
-                # the final report records that this path is unverified here.
                 kwargs["initial_prompt"] = f"Nasal terms: {hotwords}"
+        # Add a short prefix to bias toward surgical instructions
+        try:
+            kwargs.setdefault("initial_prompt", "VoiceSurg: raise, lower, increase, decrease, rotate, narrow, widen, project, retract by mm or degrees.")
+        except Exception:
+            pass
         return self._model.transcribe(audio, **kwargs)
 
     def transcribe(self, audio, sample_rate: int = 16000) -> ASRResult:

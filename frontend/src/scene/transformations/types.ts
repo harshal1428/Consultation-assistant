@@ -98,7 +98,8 @@ export type TargetRegion =
   | "columella"
   | "septal_region"
   | "left_side"
-  | "right_side";
+  | "right_side"
+  | "face";
 
 export type Parameter =
   | "height"
@@ -117,14 +118,19 @@ export type Operation =
   | "raise"
   | "lower";
 
-export type Unit = "mm" | "cm" | "degrees";
+export type Unit = "mm" | "cm" | "degrees" | "ratio";
 
 export type InstructionStatus =
   | "ok"
   | "needs_clarification"
   | "unsupported"
   | "invalid"
-  | "no_change";
+  | "no_change"
+  /**
+   * The clinical concept is registered and reviewable, but no verified
+   * geometry driver exists, so it must never be applied to the mesh.
+   */
+  | "not_simulated";
 
 export type ParserSource = "llm" | "rules";
 
@@ -135,6 +141,13 @@ export type ParserSource = "llm" | "rules";
 export interface Instruction {
   target: TargetRegion | null;
   parameter: Parameter | null;
+  /**
+   * Stable key into `shared/clinical_parameters.json`, when the parser can
+   * identify the precise clinical concept. The coarse target/parameter pair is
+   * retained for the existing review controls, but it must not be used to
+   * guess a model field when this key is present.
+   */
+  clinical_parameter?: string | null;
   operation: Operation | null;
   /** Normalized non-negative magnitude, in `unit`. */
   value: number | null;
@@ -156,6 +169,7 @@ export interface Instruction {
 export interface ContextItem {
   target: TargetRegion | null;
   parameter: Parameter | null;
+  clinical_parameter?: string | null;
   operation: Operation | null;
   value: number | null;
   unit: Unit | null;
@@ -212,8 +226,14 @@ export type ParamKey =
   | "leftRightAsymmetry"
   | "nasalLength";
 
-/** Parameters that the slider panel can display and adjust. */
-export const SIMULATED_PARAM_KEYS: ParamKey[] = [
+/**
+ * Parameters that the geometry engine actually reads (`deformPositions`).
+ *
+ * This list is deliberately narrower than `ParamKey`: older sessions may still
+ * contain registered-but-not-simulated fields, but those fields have no geometry
+ * driver and must never be presented as interactive simulation controls.
+ */
+export const SIMULATED_PARAM_KEYS = [
   "bridgeHeight",
   "bridgeWidth",
   "tipProjection",
@@ -231,22 +251,9 @@ export const SIMULATED_PARAM_KEYS: ParamKey[] = [
   "jawDefinition",
   "cheekProjection",
   "cheekFullness",
-  "dorsalHumpReduction",
-  "radixHeight",
-  "nasofrontalAngle",
-  "nasolabialAngle",
-  "columellarShow",
-  "columellarLobularAngle",
-  "supratipBreak",
-  "tipDefinition",
-  "alarFlare",
-  "alarBaseWidth",
-  "nostrilShape",
-  "nostrilSymmetry",
-  "dorsalSeptalDeviation",
-  "leftRightAsymmetry",
-  "nasalLength",
-];
+] as const satisfies readonly ParamKey[];
+
+export type SimulatedParamKey = (typeof SIMULATED_PARAM_KEYS)[number];
 
 export type ViewMode = "before" | "after" | "compare";
 

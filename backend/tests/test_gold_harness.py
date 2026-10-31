@@ -79,8 +79,11 @@ class GoldHarnessTests(unittest.TestCase):
         self.assertAlmostEqual(
             self.metrics["overall"]["missed_commit_rate"], missed / len(commands)
         )
-        # Current baseline: the parser applies 74 of 100 command rows.
-        self.assertEqual(self.metrics["overall"]["applied_command_rows"], 74)
+        # Current honest baseline: 71 of 100 command rows apply. The three rows
+        # that no longer apply are alar-base/dorsal-hump commands that are
+        # registered but have no verified geometry driver. They must be reported
+        # as not_simulated rather than silently mapped to alar width/bridge height.
+        self.assertEqual(self.metrics["overall"]["applied_command_rows"], 71)
 
     def test_slot_accuracy_is_bounded_and_complete(self):
         slots = self.metrics["overall"]["slot_accuracy"]

@@ -1,0 +1,69 @@
+dataset_version,id,text,group,expected_status,expected_clinical_parameter,expected_target,expected_parameter,expected_operation,expected_value,expected_unit,notes
+v1,r001,Raise the nasal bridge by two millimetres,nose,ok,,nasal_bridge,height,raise,2.0,mm,Simulated bridge height through the coarse pair
+v1,r002,Lower the dorsum height by 1.5 mm,nose,ok,bridge_height,nasal_bridge,height,lower,1.5,mm,Specific bridge-height vocabulary
+v1,r003,Widen the bridge width by 1 mm,nose,ok,bridge_width,nasal_bridge,width,widen,1.0,mm,Simulated bridge width
+v1,r004,Narrow the nasal bridge width by 0.5 mm,nose,ok,bridge_width,nasal_bridge,width,narrow,0.5,mm,Simulated bridge width with a decimal
+v1,r005,Increase tip projection by 2 mm,nose,ok,tip_projection,nasal_tip,projection,increase,2.0,mm,Simulated tip projection
+v1,r006,Deproject the nasal tip by 1 mm,nose,ok,,nasal_tip,projection,decrease,1.0,mm,Deproject is a projection change
+v1,r007,Lift the tip height by 1.5 mm,nose,ok,tip_height,nasal_tip,height,raise,1.5,mm,Simulated tip height
+v1,r008,Rotate the nasal tip upward by 3 degrees,nose,ok,tip_rotation,nasal_tip,rotation,rotate,3.0,degrees,Cephalic tip rotation
+v1,r009,Rotate the nasal tip downward by 2 degrees,nose,ok,tip_rotation,nasal_tip,rotation,rotate,2.0,degrees,Caudal tip rotation
+v1,r010,Narrow the alar width by 1 mm,nose,ok,alar_width,nostril_region,width,narrow,1.0,mm,Simulated alar width
+v1,r011,Widen the nostrils by 1.5 mm,nose,ok,alar_width,nostril_region,width,widen,1.5,mm,Plural nostril wording
+v1,r012,Advance the upper lip projection by 1 mm,lips,ok,upper_lip_projection,upper_lip,projection,increase,1.0,mm,Simulated upper-lip projection
+v1,r013,Retract the upper lip projection by 0.5 mm,lips,ok,upper_lip_projection,upper_lip,projection,decrease,0.5,mm,Simulated upper-lip projection
+v1,r014,Plump the upper lip fullness by 1 mm,lips,ok,upper_lip_fullness,upper_lip,fullness,increase,1.0,mm,Plump maps to fullness
+v1,r015,Deflate the lower lip fullness by 0.5 mm,lips,ok,lower_lip_fullness,lower_lip,fullness,decrease,0.5,mm,Deflate maps to fullness decrease
+v1,r016,Advance the lower lip projection by 1 mm,lips,ok,lower_lip_projection,lower_lip,projection,increase,1.0,mm,Simulated lower-lip projection
+v1,r017,Increase chin height by 1 mm,chin,ok,chin_height,chin,height,increase,1.0,mm,Simulated chin height
+v1,r018,Narrow the chin width by 1.5 mm,chin,ok,chin_width,chin,width,narrow,1.5,mm,Simulated chin width
+v1,r019,Widen the mandibular width by 2 mm,jawline,ok,mandibular_width,jawline,width,widen,2.0,mm,Simulated jaw width
+v1,r020,Increase the jawline definition by 1 mm,jawline,ok,jawline_definition,jawline,definition,increase,1.0,mm,Simulated jaw definition
+v1,r021,Increase malar projection by 1.5 mm,cheeks,ok,malar_projection,cheek,projection,increase,1.5,mm,Simulated cheek projection
+v1,r022,Reduce cheek fullness by 1 mm,cheeks,ok,cheek_fullness,cheek,fullness,decrease,1.0,mm,Simulated cheek fullness
+v1,r023,Reduce the bridge by 1 mm,nose,ok,,nasal_bridge,height,decrease,1.0,mm,Bare bridge keeps the coarse height fallback
+v1,r024,Raise the tip by 2 mm,nose,ok,tip_height,nasal_tip,height,raise,2.0,mm,Raise-the-tip vocabulary maps to tip height
+v1,r025,Reduce the alar flare by 1 mm,nose,not_simulated,alar_flare,nostril_region,width,decrease,1.0,mm,Must not alias alar width
+v1,r026,Narrow the alar base width by 1 mm,nose,not_simulated,alar_base_width,nostril_region,width,narrow,1.0,mm,Must not alias alar width
+v1,r027,Reduce the dorsal hump by 2 mm,nose,not_simulated,dorsal_hump_reduction,nasal_bridge,height,decrease,2.0,mm,Must not alias bridge height
+v1,r028,Lengthen the nose by 1 mm,nose,not_simulated,nasal_length,nasal_bridge,height,increase,1.0,mm,Nasal length has no driver
+v1,r029,Decrease the nasofrontal angle by 3 degrees,nose,not_simulated,nasofrontal_angle,nasal_bridge,rotation,decrease,3.0,degrees,Angular concept preserved
+v1,r030,Increase the nasolabial angle by 5 degrees,nose,not_simulated,nasolabial_angle,cheek,rotation,increase,5.0,degrees,Angle is not coerced to millimetres
+v1,r031,Reduce columellar show by 1 mm,nose,not_simulated,columellar_show,cheek,projection,decrease,1.0,mm,Must not alias cheek projection
+v1,r032,Narrow the nostril width by 1 mm,nose,not_simulated,nostril_width,nostril_region,width,narrow,1.0,mm,Nostril width differs from alar width
+v1,r033,Reduce alar asymmetry by 1 mm,nose,not_simulated,alar_asymmetry,nostril_region,definition,decrease,1.0,mm,Asymmetry concept preserved
+v1,r034,Increase tip definition by 1 mm,nose,not_simulated,tip_definition,nasal_tip,definition,increase,1.0,mm,Must not alias tip height
+v1,r035,Deepen the supratip break by 0.5 mm,nose,not_simulated,supratip_break,nasal_tip,height,increase,0.5,mm,Supratip break differs from tip height
+v1,r036,Increase dorsal contour by 1 mm,nose,not_simulated,dorsal_contour,nasal_bridge,definition,increase,1.0,,Contour has no canonical unit
+v1,r037,Increase dorsal deviation by 1 mm,nose,not_simulated,dorsal_deviation,septal_region,projection,increase,1.0,mm,Deviation is not a bridge-height change
+v1,r038,Increase septal deviation by 1 mm,nose,not_simulated,septal_deviation,septal_region,projection,increase,1.0,mm,Septal concept preserved
+v1,r039,Shorten the upper lip height by 1 mm,lips,not_simulated,upper_lip_height,upper_lip,height,decrease,1.0,mm,Lip height differs from lip fullness
+v1,r040,Lengthen the lower lip height by 1 mm,lips,not_simulated,lower_lip_height,lower_lip,height,increase,1.0,mm,Lip height differs from lip projection
+v1,r041,Increase vermilion height by 1 mm,lips,not_simulated,vermilion_height,upper_lip,height,increase,1.0,mm,Vermilion concept preserved
+v1,r042,Shorten the philtrum length by 1 mm,lips,not_simulated,philtrum_length,upper_lip,height,decrease,1.0,mm,Philtrum concept preserved
+v1,r043,Raise the oral commissure position by 1 mm,lips,not_simulated,oral_commissure_position,upper_lip,width,raise,1.0,mm,Commissure concept preserved
+v1,r044,Increase cupid's bow definition by 1 mm,lips,not_simulated,cupids_bow_definition,upper_lip,definition,increase,1.0,mm,Apostrophe synonym
+v1,r045,Increase lip asymmetry by 1 mm,lips,not_simulated,lip_asymmetry,upper_lip,definition,increase,1.0,mm,Asymmetry concept preserved
+v1,r046,Open the mentolabial angle by 5 degrees,chin,not_simulated,mentolabial_angle,chin,rotation,increase,5.0,degrees,Open is an increase for angles
+v1,r047,Increase chin asymmetry by 1 mm,chin,not_simulated,chin_asymmetry,chin,definition,increase,1.0,mm,Asymmetry concept preserved
+v1,r048,Increase vertical chin proportion by 0.05,chin,not_simulated,vertical_chin_proportion,chin,height,increase,0.05,ratio,Ratio unit preserved
+v1,r049,Reduce the gonial angle by 3 degrees,jawline,not_simulated,gonial_angle,jawline,rotation,decrease,3.0,degrees,Angular concept preserved
+v1,r050,Narrow the lower face width by 2 mm,jawline,not_simulated,lower_face_width,jawline,width,narrow,2.0,mm,Lower-face width differs from mandibular width
+v1,r051,Increase jaw asymmetry by 1 mm,jawline,not_simulated,jaw_asymmetry,jawline,definition,increase,1.0,mm,Asymmetry concept preserved
+v1,r052,Increase jawline contour by 1 mm,jawline,not_simulated,jawline_contour,jawline,definition,increase,1.0,,Contour has no canonical unit
+v1,r053,Narrow the cheek width by 1 mm,cheeks,not_simulated,cheek_width,cheek,width,narrow,1.0,mm,Cheek width differs from cheek projection
+v1,r054,Increase cheek asymmetry by 1 mm,cheeks,not_simulated,cheek_asymmetry,cheek,definition,increase,1.0,mm,Asymmetry concept preserved
+v1,r055,Increase midface contour by 1 mm,cheeks,not_simulated,midface_contour,cheek,definition,increase,1.0,,Contour has no canonical unit
+v1,r056,Narrow facial width by 3 mm,face,not_simulated,facial_width,face,width,narrow,3.0,mm,Face-level concept preserved
+v1,r057,Reduce facial height by 2 mm,face,not_simulated,facial_height,face,height,decrease,2.0,mm,Face-level concept preserved
+v1,r058,Increase facial thirds by 0.05,face,not_simulated,facial_thirds,face,height,increase,0.05,ratio,Ratio unit preserved
+v1,r059,Increase facial fifths by 0.05,face,not_simulated,facial_fifths,face,width,increase,0.05,ratio,Ratio unit preserved
+v1,r060,Increase facial symmetry by 0.05,face,not_simulated,facial_symmetry,face,definition,increase,0.05,ratio,Ratio unit preserved
+v1,r061,Increase midline deviation by 1 mm,face,not_simulated,midline_deviation,face,projection,increase,1.0,mm,Face-level concept preserved
+v1,r062,Increase regional facial proportions by 0.05,face,not_simulated,regional_proportions,face,height,increase,0.05,ratio,Ratio unit preserved
+v1,r063,Make the tip higher,nose,needs_clarification,,nasal_tip,height,increase,,mm,Qualitative direction without a magnitude
+v1,r064,Rotate the tip by five degrees,nose,needs_clarification,tip_rotation,nasal_tip,rotation,rotate,5.0,degrees,Rotation direction is genuinely ambiguous
+v1,r065,Reduce dorsal asymmetry by 1 mm,nose,needs_clarification,,,,,,,Equal-length vocabulary conflict
+v1,r066,Narrow the tip by 1 mm,nose,unsupported,,nasal_tip,width,narrow,,mm,Unsupported tip width
+v1,r067,Do not raise the bridge,nose,no_change,,nasal_bridge,,,,,Negation must never apply
+v1,r068,Should we consider reducing the dorsal hump,nose,no_change,,,,,,,Question must never apply

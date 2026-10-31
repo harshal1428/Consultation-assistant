@@ -10,6 +10,7 @@ import logging
 import os
 from typing import Dict, List, Optional
 
+from .clinical_registry import CLINICAL_PARAMETERS
 from .schemas import ContextItem
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ SUPPORTED_TARGETS = """
 Supported targets (enums):
 nasal_bridge, nasal_dorsum, nasal_tip, nostril_region,
 upper_lip, lower_lip, chin, jawline, cheek,
-nasal_base, columella, septal_region, left_side, right_side
+nasal_base, columella, septal_region, left_side, right_side, face
 """
 
 SUPPORTED_PARAMS = """
@@ -41,7 +42,7 @@ increase, decrease, rotate, narrow, widen, raise, lower
 
 SUPPORTED_UNITS = """
 Supported units (enums):
-mm, cm, degrees
+mm, cm, degrees, ratio
 """
 
 ANATOMICAL_SYNONYMS = """
@@ -63,20 +64,25 @@ Anatomical synonyms:
 
 PARAMETER_NOTES = """
 Parameter notes:
-- "fullness"/"plump"/"prominence" -> fullness
+- "fullness"/"plump" -> fullness
 - "definition"/"sharpen"/"contour"/"angular" -> definition
 - If a lip instruction does not say upper or lower, set target to null (it is ambiguous).
-- "hump"/"bump"/"dorsal hump"/"dorsal prominence" -> nasal_bridge with operation decrease (reduction)
-- "droopy tip" -> nasal_tip with operation decrease (height) or increase (rotation downward)
-- "button nose"/"scooped" -> nasal_tip with operation increase (rotation upward)
-- "refined tip"/"tip definition" -> nasal_tip with operation increase (definition)
-- "alar flare"/"nostril flare" -> nostril_region with operation widen
-- "alar base width" -> nostril_region with operation increase (width)
-- "nasolabial angle" -> cheek with operation increase/decrease (angle)
-- "columellar show" -> cheek with operation increase/decrease (projection)
-- "columellar-lobular angle" -> cheek with operation increase/decrease (angle)
-- "left-right asymmetry"/"asymmetry" -> jawline with operation increase/decrease (definition)
+- "hump"/"bump"/"dorsal hump" is dorsal_hump_reduction, not bridge height.
+- "alar flare" is alar_flare; "alar base width" is alar_base_width; neither is
+  alar_width. Use the clinical_parameter key whenever one matches.
+- "nasolabial angle", "nasofrontal angle", "columellar show" and
+  "columellar-lobular angle" are registered clinical concepts, not cheek
+  projection. Never map an angle to a millimetre parameter.
+- "left-right asymmetry" is only jaw_asymmetry when the jaw is named. Otherwise
+  set target to null and ask for the region.
+- Never substitute a similar simulated concept for a registered concept.
 """
+
+CLINICAL_KEY_GUIDE = "Clinical parameter keys (key | name | simulated):\n" + "\n".join(
+    f"- {parameter.key} | {parameter.clinical_name} | "
+    f"{'simulated' if parameter.simulated else 'registered, not simulated'}"
+    for parameter in CLINICAL_PARAMETERS.values()
+)
 
 
 SYSTEM_INSTRUCTION = f"""
@@ -99,6 +105,8 @@ If a region is unsupported (brow, forehead, eyes, ears, mouth), set target to nu
 
 {PARAMETER_NOTES}
 
+{CLINICAL_KEY_GUIDE}
+
 Multiple instructions: return one array element per independent instruction, in spoken order.
 
 Return JSON with this exact shape:
@@ -107,6 +115,7 @@ Return JSON with this exact shape:
     {{
       "target": string | null,
       "parameter": string | null,
+      "clinical_parameter": string | null,
       "operation": string | null,
       "value": number | null,
       "unit": "mm" | "cm" | "degrees" | null,
@@ -164,6 +173,7 @@ def parse_with_llm(
             {
                 "target": c.target.value if c.target else None,
                 "parameter": c.parameter.value if c.parameter else None,
+                "clinical_parameter": c.clinical_parameter,
                 "operation": c.operation.value if c.operation else None,
                 "value": c.value,
                 "unit": c.unit.value if c.unit else None,

@@ -4,7 +4,8 @@ import type {
   ModelState,
   ParamKey,
 } from "../transformations/types";
-import { paramKeyFor } from "../../lib/params";
+import { paramKeyForInstruction } from "../../lib/params";
+import { clinicalParameterFor } from "../../lib/clinicalRegistry";
 import { applyCommand } from "../transformations/logic";
 import { makeId } from "../session/logic";
 import type { LiveEvent, LiveEventSource, LiveExecutionStatus } from "./types";
@@ -51,12 +52,20 @@ export function evaluateLiveInstruction(
   if (instruction.status === "unsupported") {
     return reject("unsupported", instruction.reason ?? "Instruction is not supported.");
   }
+  if (instruction.status === "not_simulated") {
+    const clinical = clinicalParameterFor(instruction.clinical_parameter);
+    return reject(
+      "unsupported",
+      instruction.reason ??
+        `${clinical?.clinicalName ?? "This clinical parameter"} is registered and reviewable but has no verified geometry driver, so it was not applied.`,
+    );
+  }
   // A range rejection carries an adjusted value; report it precisely as
   // out-of-range rather than as a generic clarification request.
   if (instruction.adjusted_value !== null && instruction.adjusted_value !== undefined) {
     const requested = instruction.requested_value ?? instruction.value;
     const requestedUnit = instruction.requested_unit ?? instruction.unit ?? "";
-    const key = paramKeyFor(instruction.target, instruction.parameter);
+    const key = paramKeyForInstruction(instruction);
     return {
       status: "out_of_range",
       reason: `Requested ${requested} ${requestedUnit} is outside the supported range; suggested ${instruction.adjusted_value} ${instruction.unit ?? requestedUnit}. Not applied.`.replace(/\s+/g, " "),
@@ -83,7 +92,7 @@ export function evaluateLiveInstruction(
     return reject("no_change", "No magnitude was provided by the parser.");
   }
 
-  const key = paramKeyFor(instruction.target, instruction.parameter);
+  const key = paramKeyForInstruction(instruction);
   if (!key) {
     return reject(
       "unsupported",
@@ -286,6 +295,23 @@ function pdfEscape(text: string): string {
 }
 
 const PDF_LINES_PER_PAGE = 58;
+const PDF_MAX_LINE_CHARS = 105;
+
+/** Word-wrap a long report line so it fits the A4 text frame. */
+function wrapPdfLine(line: string): string[] {
+  if (line.length <= PDF_MAX_LINE_CHARS) return [line];
+  const out: string[] = [];
+  let rest = line;
+  while (rest.length > PDF_MAX_LINE_CHARS) {
+    const slice = rest.slice(0, PDF_MAX_LINE_CHARS + 1);
+    const splitAt = Math.max(slice.lastIndexOf(" "), slice.lastIndexOf("|"));
+    const at = splitAt > 20 ? splitAt : PDF_MAX_LINE_CHARS;
+    out.push(rest.slice(0, at).trimEnd());
+    rest = rest.slice(at).trimStart();
+  }
+  out.push(rest);
+  return out;
+}
 
 /**
  * Render a text report as a real PDF 1.4 file (single font, Helvetica, one or
@@ -294,11 +320,9 @@ const PDF_LINES_PER_PAGE = 58;
  * Returned as a string of printable ASCII; its UTF-8 bytes are identical to the
  * required PDF bytes, so it can be passed straight to `Blob`.
  */
-export function buildLivePdf(
-  lines: string[],
-  title = "VoiceSurg 3D - Live Simulation change log",
-): string {
-  const all = [title, "", ...lines];
+export function buildTextPdf(lines: string[], title: string): string {
+  const wrapped = lines.flatMap((line) => wrapPdfLine(line));
+  const all = [title, "", ...wrapped];
   const pages: string[][] = [];
   for (let i = 0; i < Math.max(all.length, 1); i += PDF_LINES_PER_PAGE) {
     pages.push(all.slice(i, i + PDF_LINES_PER_PAGE));
@@ -353,4 +377,12 @@ export function buildLivePdf(
   body += `trailer\n<< /Size ${maxId + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`;
 
   return body;
+}
+
+/** Live change-log PDF helper retained for the existing export UI. */
+export function buildLivePdf(
+  lines: string[],
+  title = "VoiceSurg 3D - Live Simulation change log",
+): string {
+  return buildTextPdf(lines, title);
 }

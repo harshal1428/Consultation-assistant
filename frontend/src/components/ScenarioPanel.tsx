@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import type { Scenario } from "../scene/session/types";
 import type { ModelState } from "../scene/transformations/types";
 import { PARAM_DESCRIPTORS } from "../lib/params";
-import type { ParamKey } from "../scene/transformations/types";
+import type { SimulatedParamKey } from "../scene/transformations/types";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Icon } from "./Icon";
 
@@ -19,7 +19,7 @@ interface ScenarioPanelProps {
   onSelect: (id: string) => void;
 }
 
-const SUMMARY_KEYS: ParamKey[] = [
+const SUMMARY_KEYS: SimulatedParamKey[] = [
   "bridgeHeight",
   "bridgeWidth",
   "tipProjection",

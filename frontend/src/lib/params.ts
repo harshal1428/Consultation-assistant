@@ -1,25 +1,30 @@
 import type {
+  Instruction,
   ModelField,
   Operation,
   ParamKey,
   Parameter,
+  SimulatedParamKey,
   TargetRegion,
   Unit,
 } from "../scene/transformations/types";
+import {
+  clinicalParameterFor,
+  modelFieldForClinicalKey,
+  uniqueClinicalParameterForPair,
+} from "./clinicalRegistry";
 
 /**
  * ---------------------------------------------------------------------------
- * Central multi-region parameter registry (Phase 5, extended in Phase 7)
+ * Simulated-control registry
  * ---------------------------------------------------------------------------
- * Single documented source of truth for every supported control. The geometry
- * engine, the parameter panel and the command mapping all read from this
- * registry, so the UI, the parser contract and the geometry can never disagree
- * about a parameter.
+ * Every entry here has a verified geometry driver in `deformPositions`. The
+ * broader clinical catalogue (registered, parsed and reviewable concepts that
+ * are not geometry-backed) lives in `shared/clinical_parameters.json` and is
+ * exposed through `clinicalRegistry.ts`.
  *
- * Each entry declares: a unique canonical key, its canonical target region and
- * parameter name, its unit, bounds, default value, direction semantics, the
- * named geometry deformation it drives, its supported operations and its
- * explicit support status.
+ * Keeping the two tables separate is intentional: a clinical concept must not
+ * appear as an adjustable simulation control merely because it was registered.
  *
  * These are prototype interaction bounds and illustrative units, NOT medically
  * approved limits or clinically accurate millimetres.
@@ -62,7 +67,9 @@ export const PARAM_GROUPS: ParamGroupMeta[] = [
 ];
 
 export interface ParamDescriptor {
-  key: ParamKey;
+  key: SimulatedParamKey;
+  /** Stable key in the shared clinical registry. */
+  clinicalKey: string;
   label: string;
   shortLabel: string;
   unit: Extract<Unit, "mm" | "degrees">;
@@ -87,18 +94,19 @@ export interface ParamDescriptor {
    * registry-to-geometry mapping is explicit and testable.
    */
   deformation: string;
-  /** Explicit support status. `false` controls must not be presented as functional. */
-  supported: boolean;
+  /** Explicit support status. Every entry is geometry-backed. */
+  supported: true;
   /** Whether this control is reachable from a parsed voice command. */
-  voice: boolean;
+  voice: true;
   /** Whether this control is adjustable from the panel. */
-  manual: boolean;
+  manual: true;
 }
 
-export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
+const PARAM_DESCRIPTOR_TABLE: Record<SimulatedParamKey, ParamDescriptor> = {
   /* ------------------------------- Nose -------------------------------- */
   bridgeHeight: {
     key: "bridgeHeight",
+    clinicalKey: "bridge_height",
     label: "Nasal bridge height",
     shortLabel: "Bridge height",
     unit: "mm",
@@ -120,6 +128,7 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
   },
   bridgeWidth: {
     key: "bridgeWidth",
+    clinicalKey: "bridge_width",
     label: "Nasal bridge width",
     shortLabel: "Bridge width",
     unit: "mm",
@@ -141,6 +150,7 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
   },
   tipProjection: {
     key: "tipProjection",
+    clinicalKey: "tip_projection",
     label: "Tip projection",
     shortLabel: "Tip projection",
     unit: "mm",
@@ -162,6 +172,7 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
   },
   tipHeight: {
     key: "tipHeight",
+    clinicalKey: "tip_height",
     label: "Tip height",
     shortLabel: "Tip height",
     unit: "mm",
@@ -183,6 +194,7 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
   },
   tipRotation: {
     key: "tipRotation",
+    clinicalKey: "tip_rotation",
     label: "Tip rotation",
     shortLabel: "Tip rotation",
     unit: "degrees",
@@ -193,7 +205,7 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
     max: 45,
     step: 1,
     default: 0,
-    hint: "Nasolabial-angle rotation about the documented subnasale pivot.",
+    hint: "Tip rotation about the documented prototype subnasale pivot.",
     positive: "Rotated upward (cranial)",
     negative: "Rotated downward (caudal)",
     operations: ["rotate"],
@@ -204,6 +216,7 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
   },
   alarWidth: {
     key: "alarWidth",
+    clinicalKey: "alar_width",
     label: "Alar width",
     shortLabel: "Alar width",
     unit: "mm",
@@ -227,6 +240,7 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
   /* ------------------------------- Lips -------------------------------- */
   upperLipProjection: {
     key: "upperLipProjection",
+    clinicalKey: "upper_lip_projection",
     label: "Upper-lip projection",
     shortLabel: "Upper-lip projection",
     unit: "mm",
@@ -248,6 +262,7 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
   },
   upperLipFullness: {
     key: "upperLipFullness",
+    clinicalKey: "upper_lip_fullness",
     label: "Upper-lip fullness",
     shortLabel: "Upper-lip fullness",
     unit: "mm",
@@ -269,6 +284,7 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
   },
   lowerLipProjection: {
     key: "lowerLipProjection",
+    clinicalKey: "lower_lip_projection",
     label: "Lower-lip projection",
     shortLabel: "Lower-lip projection",
     unit: "mm",
@@ -290,6 +306,7 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
   },
   lowerLipFullness: {
     key: "lowerLipFullness",
+    clinicalKey: "lower_lip_fullness",
     label: "Lower-lip fullness",
     shortLabel: "Lower-lip fullness",
     unit: "mm",
@@ -313,6 +330,7 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
   /* ------------------------------- Chin -------------------------------- */
   chinProjection: {
     key: "chinProjection",
+    clinicalKey: "chin_projection",
     label: "Chin projection",
     shortLabel: "Chin projection",
     unit: "mm",
@@ -334,6 +352,7 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
   },
   chinHeight: {
     key: "chinHeight",
+    clinicalKey: "chin_height",
     label: "Chin height",
     shortLabel: "Chin height",
     unit: "mm",
@@ -355,6 +374,7 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
   },
   chinWidth: {
     key: "chinWidth",
+    clinicalKey: "chin_width",
     label: "Chin width",
     shortLabel: "Chin width",
     unit: "mm",
@@ -378,6 +398,7 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
   /* ----------------------------- Jawline ------------------------------- */
   jawWidth: {
     key: "jawWidth",
+    clinicalKey: "mandibular_width",
     label: "Jaw width",
     shortLabel: "Jaw width",
     unit: "mm",
@@ -399,6 +420,7 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
   },
   jawDefinition: {
     key: "jawDefinition",
+    clinicalKey: "jawline_definition",
     label: "Jawline definition",
     shortLabel: "Jawline definition",
     unit: "mm",
@@ -422,6 +444,7 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
   /* ------------------------------ Cheeks ------------------------------- */
   cheekProjection: {
     key: "cheekProjection",
+    clinicalKey: "malar_projection",
     label: "Cheek projection",
     shortLabel: "Cheek projection",
     unit: "mm",
@@ -443,6 +466,7 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
   },
   cheekFullness: {
     key: "cheekFullness",
+    clinicalKey: "cheek_fullness",
     label: "Cheek fullness",
     shortLabel: "Cheek fullness",
     unit: "mm",
@@ -462,327 +486,19 @@ export const PARAM_DESCRIPTORS: Record<ParamKey, ParamDescriptor> = {
     voice: true,
     manual: true,
   },
-
-  /* ----------------------- Additional Clinical Parameters ---------------------- */
-  dorsalHumpReduction: {
-    key: "dorsalHumpReduction",
-    label: "Dorsal hump reduction",
-    shortLabel: "Dorsal hump",
-    unit: "mm",
-    target: "nasal_bridge",
-    parameter: "height",
-    group: "nose",
-    min: 0,
-    max: 10,
-    step: 1,
-    default: 0,
-    hint: "Reduction of the dorsal hump (convexity) on the nasal bridge.",
-    positive: "Reduce hump (lower dorsum)",
-    negative: "N/A (reduction only)",
-    operations: ["decrease"],
-    deformation: "bridgeWeight",
-    supported: true,
-    voice: true,
-    manual: true,
-  },
-  radixHeight: {
-    key: "radixHeight",
-    label: "Radix height",
-    shortLabel: "Radix height",
-    unit: "mm",
-    target: "nasal_bridge",
-    parameter: "height",
-    group: "nose",
-    min: -5,
-    max: 10,
-    step: 1,
-    default: 0,
-    hint: "Height of the radix (nasal root) at the nasofrontal junction.",
-    positive: "Higher radix",
-    negative: "Lower radix",
-    operations: ["increase", "decrease", "raise", "lower"],
-    deformation: "bridgeWeight",
-    supported: true,
-    voice: true,
-    manual: true,
-  },
-  nasofrontalAngle: {
-    key: "nasofrontalAngle",
-    label: "Nasofrontal angle",
-    shortLabel: "Nasofrontal angle",
-    unit: "degrees",
-    target: "cheek",
-    parameter: "rotation",
-    group: "nose",
-    min: 115,
-    max: 150,
-    step: 1,
-    default: 130,
-    hint: "Angle between the nasal dorsum and the forehead (glabella).",
-    positive: "More obtuse angle",
-    negative: "More acute angle",
-    operations: ["increase", "decrease"],
-    deformation: "bridgeWeight",
-    supported: true,
-    voice: true,
-    manual: true,
-  },
-  nasolabialAngle: {
-    key: "nasolabialAngle",
-    label: "Nasolabial angle",
-    shortLabel: "Nasolabial angle",
-    unit: "degrees",
-    target: "cheek",
-    parameter: "rotation",
-    group: "nose",
-    min: 80,
-    max: 120,
-    step: 1,
-    default: 95,
-    hint: "Angle between the columella and the upper lip.",
-    positive: "More obtuse angle",
-    negative: "More acute angle",
-    operations: ["increase", "decrease"],
-    deformation: "bridgeWeight",
-    supported: true,
-    voice: true,
-    manual: true,
-  },
-  columellarShow: {
-    key: "columellarShow",
-    label: "Columellar show",
-    shortLabel: "Columellar show",
-    unit: "mm",
-    target: "cheek",
-    parameter: "projection",
-    group: "nose",
-    min: 0,
-    max: 6,
-    step: 1,
-    default: 3,
-    hint: "Visible height of the columella below the nostril rim.",
-    positive: "More columellar show",
-    negative: "Less columellar show",
-    operations: ["increase", "decrease"],
-    deformation: "bridgeWeight",
-    supported: true,
-    voice: true,
-    manual: true,
-  },
-  columellarLobularAngle: {
-    key: "columellarLobularAngle",
-    label: "Columellar-lobular angle",
-    shortLabel: "Columellar-lobular angle",
-    unit: "degrees",
-    target: "cheek",
-    parameter: "rotation",
-    group: "nose",
-    min: 30,
-    max: 70,
-    step: 1,
-    default: 45,
-    hint: "Angle between the columella and the lobule of the ear (or lobule reference).",
-    positive: "More obtuse angle",
-    negative: "More acute angle",
-    operations: ["increase", "decrease"],
-    deformation: "bridgeWeight",
-    supported: true,
-    voice: true,
-    manual: true,
-  },
-  supratipBreak: {
-    key: "supratipBreak",
-    label: "Supratip break",
-    shortLabel: "Supratip break",
-    unit: "mm",
-    target: "nasal_tip",
-    parameter: "height",
-    group: "nose",
-    min: -3,
-    max: 3,
-    step: 1,
-    default: 0,
-    hint: "The subtle depression just above the tip (supratip depression).",
-    positive: "Deeper supratip break",
-    negative: "Shallower supratip break",
-    operations: ["increase", "decrease"],
-    deformation: "tipWeight",
-    supported: true,
-    voice: true,
-    manual: true,
-  },
-  tipDefinition: {
-    key: "tipDefinition",
-    label: "Tip definition",
-    shortLabel: "Tip definition",
-    unit: "mm",
-    target: "nasal_tip",
-    parameter: "definition",
-    group: "nose",
-    min: -3,
-    max: 5,
-    step: 1,
-    default: 0,
-    hint: "Sharpness/contour definition of the nasal tip.",
-    positive: "More defined tip",
-    negative: "Softer tip",
-    operations: ["increase", "decrease"],
-    deformation: "tipWeight",
-    supported: true,
-    voice: true,
-    manual: true,
-  },
-  alarFlare: {
-    key: "alarFlare",
-    label: "Alar flare",
-    shortLabel: "Alar flare",
-    unit: "mm",
-    target: "nostril_region",
-    parameter: "width",
-    group: "nose",
-    min: -5,
-    max: 5,
-    step: 1,
-    default: 0,
-    hint: "Lateral flaring of the alar wings (distinct from alar base width).",
-    positive: "More flaring",
-    negative: "Less flaring",
-    operations: ["increase", "decrease", "widen", "narrow"],
-    deformation: "alarWeight",
-    supported: true,
-    voice: true,
-    manual: true,
-  },
-  alarBaseWidth: {
-    key: "alarBaseWidth",
-    label: "Alar base width",
-    shortLabel: "Alar base width",
-    unit: "mm",
-    target: "nostril_region",
-    parameter: "width",
-    group: "nose",
-    min: 0,
-    max: 10,
-    step: 1,
-    default: 0,
-    hint: "Width of the alar base at the nostril sill.",
-    positive: "Wider alar base",
-    negative: "Narrower alar base",
-    operations: ["increase", "decrease", "widen", "narrow"],
-    deformation: "alarWeight",
-    supported: true,
-    voice: true,
-    manual: true,
-  },
-  nostrilShape: {
-    key: "nostrilShape",
-    label: "Nostril shape",
-    shortLabel: "Nostril shape",
-    unit: "mm",
-    target: "nostril_region",
-    parameter: "definition",
-    group: "nose",
-    min: -3,
-    max: 3,
-    step: 1,
-    default: 0,
-    hint: "Contour/shape of the nostril opening (oval, round, slit-like).",
-    positive: "More oval/round",
-    negative: "More slit-like",
-    operations: ["increase", "decrease"],
-    deformation: "alarWeight",
-    supported: false,
-    voice: true,
-    manual: false,
-  },
-  nostrilSymmetry: {
-    key: "nostrilSymmetry",
-    label: "Nostril symmetry",
-    shortLabel: "Nostril symmetry",
-    unit: "mm",
-    target: "nostril_region",
-    parameter: "definition",
-    group: "nose",
-    min: -3,
-    max: 3,
-    step: 1,
-    default: 0,
-    hint: "Left-right symmetry of the nostril openings.",
-    positive: "More symmetric",
-    negative: "More asymmetric",
-    operations: ["increase", "decrease"],
-    deformation: "alarWeight",
-    supported: false,
-    voice: true,
-    manual: false,
-  },
-  dorsalSeptalDeviation: {
-    key: "dorsalSeptalDeviation",
-    label: "Dorsal/septal deviation",
-    shortLabel: "Dorsal/septal deviation",
-    unit: "mm",
-    target: "septal_region",
-    parameter: "projection",
-    group: "nose",
-    min: -5,
-    max: 5,
-    step: 1,
-    default: 0,
-    hint: "Deviation of the dorsal septum from the midline.",
-    positive: "Deviation to right",
-    negative: "Deviation to left",
-    operations: ["increase", "decrease"],
-    deformation: "bridgeWeight",
-    supported: false,
-    voice: true,
-    manual: false,
-  },
-  leftRightAsymmetry: {
-    key: "leftRightAsymmetry",
-    label: "Left-right asymmetry",
-    shortLabel: "Asymmetry",
-    unit: "mm",
-    target: "jawline",
-    parameter: "definition",
-    group: "jawline",
-    min: -5,
-    max: 5,
-    step: 1,
-    default: 0,
-    hint: "Left-right asymmetry of the lower face/jaw.",
-    positive: "Right side more prominent",
-    negative: "Left side more prominent",
-    operations: ["increase", "decrease"],
-    deformation: "jawDefinitionWeight",
-    supported: false,
-    voice: true,
-    manual: false,
-  },
-  nasalLength: {
-    key: "nasalLength",
-    label: "Nasal length",
-    shortLabel: "Nasal length",
-    unit: "mm",
-    target: "nasal_bridge",
-    parameter: "height",
-    group: "nose",
-    min: 30,
-    max: 70,
-    step: 1,
-    default: 50,
-    hint: "Total length of the nose from radix to tip.",
-    positive: "Longer nose",
-    negative: "Shorter nose",
-    operations: ["increase", "decrease"],
-    deformation: "bridgeWeight",
-    supported: true,
-    voice: true,
-    manual: true,
-  },
 };
 
+export const PARAM_DESCRIPTORS: Record<SimulatedParamKey, ParamDescriptor> =
+  PARAM_DESCRIPTOR_TABLE;
+
 export function descriptorFor(key: ParamKey): ParamDescriptor {
-  return PARAM_DESCRIPTORS[key];
+  const descriptor = PARAM_DESCRIPTOR_TABLE[key as SimulatedParamKey];
+  if (!descriptor) {
+    throw new Error(
+      `Parameter "${key}" is registered but has no verified geometry driver.`,
+    );
+  }
+  return descriptor;
 }
 
 export interface RegionOption {
@@ -806,12 +522,13 @@ export const REGION_OPTIONS: RegionOption[] = [
   { id: "septal_region", label: "Septal region" },
   { id: "left_side", label: "Left side" },
   { id: "right_side", label: "Right side" },
+  { id: "face", label: "Face" },
 ];
 
 /** Parameters that map to a real model field for a given region. */
 export function parametersForRegion(region: TargetRegion): Parameter[] {
   const seen: Parameter[] = [];
-  for (const d of Object.values(PARAM_DESCRIPTORS) as ParamDescriptor[]) {
+  for (const d of Object.values(PARAM_DESCRIPTORS)) {
     if (d.target === region && !seen.includes(d.parameter)) seen.push(d.parameter);
   }
   return seen;
@@ -824,18 +541,16 @@ export function parameterLabel(parameter: string): string {
 
 /** Descriptors for a group, in panel order. */
 export function descriptorsForGroup(group: ParamGroup): ParamDescriptor[] {
-  return (Object.values(PARAM_DESCRIPTORS) as ParamDescriptor[]).filter(
-    (d) => d.group === group,
-  );
+  return Object.values(PARAM_DESCRIPTORS).filter((d) => d.group === group);
 }
 
 /**
- * Resolve a parsed target/parameter pair to a simulated model field.
+ * Resolve a legacy target/parameter pair to a geometry-backed field.
  *
- * Mapping is deliberately explicit and never guesses: each supported pair maps
- * to exactly one engine field, and anything else returns `null` so the caller
- * can refuse to apply it. Fields that look similar are kept distinct: bridge
- * width vs alar width, chin width vs jaw width, lip projection vs fullness.
+ * Only the 17 verified pairs are mapped. Similar concepts that used to alias
+ * (tip definition -> tip height, columellar show -> cheek projection, alar
+ * flare -> alar width) now return null so they cannot silently deform the
+ * wrong region.
  */
 export function paramKeyFor(
   target: TargetRegion | null,
@@ -851,13 +566,8 @@ export function paramKeyFor(
     if (p === "height") return "tipHeight";
     if (p === "projection") return "tipProjection";
     if (p === "rotation") return "tipRotation";
-    if (p === "definition") return "tipHeight"; // tipDefinition uses tipWeight which affects tipHeight
   }
-  if (target === "nostril_region") {
-    // Alar width is its own field, structurally independent of bridge width.
-    if (p === "width") return "alarWidth";
-    if (p === "definition") return "alarFlare";
-  }
+  if (target === "nostril_region" && p === "width") return "alarWidth";
   if (target === "upper_lip") {
     if (p === "projection") return "upperLipProjection";
     if (p === "fullness") return "upperLipFullness";
@@ -872,59 +582,54 @@ export function paramKeyFor(
     if (p === "width") return "chinWidth";
   }
   if (target === "jawline") {
-    // Jaw width and jawline definition are separate fields.
     if (p === "width") return "jawWidth";
     if (p === "definition") return "jawDefinition";
   }
   if (target === "cheek") {
     if (p === "projection") return "cheekProjection";
     if (p === "fullness") return "cheekFullness";
-    if (p === "rotation") {
-      // Nasofrontal angle, nasolabial angle, columellar-lobular angle
-      return "cheekProjection"; // reuse cheek projection for angle changes
-    }
-  }
-  if (target === "nasal_base") {
-    if (p === "height") return "radixHeight";
-    if (p === "width") return "bridgeWidth";
-  }
-  if (target === "columella") {
-    if (p === "projection") return "columellarShow";
-    if (p === "rotation") return "columellarLobularAngle";
-  }
-  if (target === "septal_region") {
-    if (p === "projection") return "dorsalSeptalDeviation";
-  }
-  if (target === "left_side" || target === "right_side") {
-    if (p === "definition") return "leftRightAsymmetry";
-  }
-  if (target === "nasal_bridge" && p === "height") {
-    // Dorsal hump reduction maps to bridge height reduction
-    return "bridgeHeight";
-  }
-  if (target === "nasal_tip" && p === "height") {
-    // Supratip break maps to tip height
-    return "tipHeight";
-  }
-  if (target === "nasal_tip" && p === "definition") {
-    // Tip definition
-    return "tipDefinition";
-  }
-  if (target === "nostril_region" && p === "width") {
-    // Alar base width and alar flare both map to alar width/flare
-    return "alarWidth";
-  }
-  if (target === "cheek" && p === "rotation") {
-    // Nasofrontal angle, nasolabial angle, columellar-lobular angle
-    return "cheekProjection";
-  }
-  if (target === "cheek" && p === "projection") {
-    // Columellar show
-    return "cheekProjection";
-  }
-  if (target === "jawline" && p === "definition") {
-    // Left-right asymmetry
-    return "leftRightAsymmetry";
   }
   return null;
+}
+
+/**
+ * Resolve the model field for an actual parsed instruction.
+ *
+ * A clinical key is authoritative. Without one, a pair that matches multiple
+ * clinical concepts is treated as ambiguous; this prevents a legacy LLM response
+ * from collapsing "alar flare" into "alar width".
+ */
+export function paramKeyForInstruction(
+  instruction: Pick<
+    Instruction,
+    "target" | "parameter" | "clinical_parameter"
+  >,
+): ModelField | null {
+  if (instruction.clinical_parameter) {
+    return modelFieldForClinicalKey(instruction.clinical_parameter);
+  }
+  const unique = uniqueClinicalParameterForPair(
+    instruction.target,
+    instruction.parameter,
+  );
+  if (unique) {
+    return unique.simulation.status === "simulated"
+      ? unique.simulation.modelField
+      : null;
+  }
+  return paramKeyFor(instruction.target, instruction.parameter);
+}
+
+/** True only when the registry says this instruction has a geometry driver. */
+export function isSimulatedInstruction(
+  instruction: Pick<
+    Instruction,
+    "target" | "parameter" | "clinical_parameter"
+  >,
+): boolean {
+  if (instruction.clinical_parameter) {
+    const parameter = clinicalParameterFor(instruction.clinical_parameter);
+    return parameter?.simulation.status === "simulated";
+  }
+  return paramKeyForInstruction(instruction) !== null;
 }

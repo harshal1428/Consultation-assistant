@@ -29,6 +29,9 @@ class TargetRegion(str, Enum):
     septal_region = "septal_region"
     left_side = "left_side"
     right_side = "right_side"
+    # Composite facial measurements are registered and reviewable even though
+    # the prototype has no calibrated face-wide geometry driver.
+    face = "face"
 
 
 class Parameter(str, Enum):
@@ -63,6 +66,8 @@ class Unit(str, Enum):
     mm = "mm"
     cm = "cm"
     degrees = "degrees"
+    # Ratios are retained as ratios. They are never coerced into millimetres.
+    ratio = "ratio"
 
 
 class InstructionStatus(str, Enum):
@@ -73,6 +78,8 @@ class InstructionStatus(str, Enum):
     unsupported = "unsupported"
     invalid = "invalid"
     no_change = "no_change"
+    # Registered and reviewable, but no verified geometry driver exists.
+    not_simulated = "not_simulated"
 
 
 class ParserSource(str, Enum):
@@ -90,6 +97,10 @@ class Instruction(BaseModel):
 
     target: Optional[TargetRegion] = None
     parameter: Optional[Parameter] = None
+    # Stable key in shared/clinical_parameters.json. The coarse target/parameter
+    # pair remains for legacy review controls, but the clinical key is
+    # authoritative when deciding whether a geometry driver exists.
+    clinical_parameter: Optional[str] = None
     operation: Optional[Operation] = None
 
     # Normalized magnitude (always non-negative) in the canonical unit.
@@ -119,6 +130,7 @@ class ContextItem(BaseModel):
 
     target: Optional[TargetRegion] = None
     parameter: Optional[Parameter] = None
+    clinical_parameter: Optional[str] = None
     operation: Optional[Operation] = None
     value: Optional[float] = None
     unit: Optional[Unit] = None

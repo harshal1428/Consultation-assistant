@@ -140,6 +140,32 @@ describe("consultation workflow", () => {
       await screen.findByText(/Consultation summary downloaded/),
     ).toBeInTheDocument();
   });
+
+  it("downloads the consultation summary as a PDF with the honesty disclosure", async () => {
+    parseMock.mockResolvedValue({ instructions: [instr()], text: "x" });
+    const createUrl = vi.fn(() => "blob:mock");
+    const revokeUrl = vi.fn();
+    (URL as unknown as { createObjectURL: unknown }).createObjectURL = createUrl;
+    (URL as unknown as { revokeObjectURL: unknown }).revokeObjectURL = revokeUrl;
+
+    render(<App />);
+    await submitCommand();
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Confirm & simulate/i }),
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: /Save PDF/i }));
+    expect(createUrl).toHaveBeenCalledTimes(1);
+    const blob = createUrl.mock.calls[0][0] as Blob;
+    expect(blob.type).toBe("application/pdf");
+    const pdf = await blob.text();
+    expect(pdf.startsWith("%PDF-1.4")).toBe(true);
+    expect(pdf).toContain("not calibrated clinical millimetres");
+    expect(
+      await screen.findByText(/Consultation PDF downloaded/),
+    ).toBeInTheDocument();
+    expect(revokeUrl).toHaveBeenCalledWith("blob:mock");
+  });
 });
 
 describe("patient sessions", () => {

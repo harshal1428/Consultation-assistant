@@ -6,6 +6,7 @@ import type {
 import { SIMULATED_PARAM_KEYS } from "../transformations/types";
 import { createManualCommand } from "../transformations/logic";
 import { PARAM_DESCRIPTORS } from "../../lib/params";
+import { clinicalParameterFor } from "../../lib/clinicalRegistry";
 import {
   describeCommand,
   formatParameter,
@@ -537,6 +538,10 @@ export function buildConsultationReport(input: ReportInput): string {
 
   lines.push("## Final working parameters");
   lines.push("");
+  lines.push(
+    "These values are illustrative scene units labelled **mm**, not calibrated clinical millimetres. Only the 17 geometry-backed fields below deform the mesh.",
+  );
+  lines.push("");
   lines.push("| Parameter | Value |");
   lines.push("|---|---|");
   for (const key of SIMULATED_PARAM_KEYS) {
@@ -568,6 +573,29 @@ export function buildConsultationReport(input: ReportInput): string {
         `${i + 1}. [${cmd.source}] ${formatTarget(cmd.target)} - ${formatParameter(
           cmd.parameter,
         )} - ${describeCommand(cmd)} (${cmd.value}${formatUnit(cmd.unit)})`,
+      );
+    });
+  }
+  lines.push("");
+
+  const registeredOnly = session.proposals.flatMap((proposal) =>
+    proposal.instructions
+      .filter((instruction) => instruction.status === "not_simulated")
+      .map((instruction) => ({ proposal, instruction })),
+  );
+  lines.push("## Registered but not simulated");
+  lines.push("");
+  if (registeredOnly.length === 0) {
+    lines.push("None.");
+  } else {
+    lines.push(
+      "These concepts were recognised and are reviewable, but no verified geometry driver exists. They were **not applied** to the model.",
+    );
+    lines.push("");
+    registeredOnly.forEach(({ proposal, instruction }) => {
+      const clinical = clinicalParameterFor(instruction.clinical_parameter);
+      lines.push(
+        `- "${proposal.originalText}" - ${clinical?.clinicalName ?? instruction.clinical_parameter} - requested ${describeCommand(instruction)}`,
       );
     });
   }

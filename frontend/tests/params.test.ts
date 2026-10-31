@@ -5,61 +5,85 @@ import {
   descriptorFor,
   descriptorsForGroup,
   paramKeyFor,
+  paramKeyForInstruction,
 } from "../src/lib/params";
+import {
+  CLINICAL_PARAMETERS,
+  REGISTERED_NOT_SIMULATED_PARAMETERS,
+  SIMULATED_CLINICAL_PARAMETERS,
+  clinicalParameterFor,
+  modelFieldForClinicalKey,
+  uniqueClinicalParameterForPair,
+} from "../src/lib/clinicalRegistry";
 import { SIMULATED_PARAM_KEYS } from "../src/scene/transformations/types";
 import { resetModel } from "../src/scene/transformations/logic";
 
 const descriptors = Object.values(PARAM_DESCRIPTORS);
 
+const SIMULATED_FIELDS = [
+  "alarWidth",
+  "bridgeHeight",
+  "bridgeWidth",
+  "cheekFullness",
+  "cheekProjection",
+  "chinHeight",
+  "chinProjection",
+  "chinWidth",
+  "jawDefinition",
+  "jawWidth",
+  "lowerLipFullness",
+  "lowerLipProjection",
+  "tipHeight",
+  "tipProjection",
+  "tipRotation",
+  "upperLipFullness",
+  "upperLipProjection",
+];
+
 describe("parameter registry", () => {
-  it("defines exactly the intended multi-region parameters", () => {
-    expect(Object.keys(PARAM_DESCRIPTORS).sort()).toEqual(
-      [
-        "alarBaseWidth",
-        "alarFlare",
-        "alarWidth",
-        "bridgeHeight",
-        "bridgeWidth",
-        "cheekFullness",
-        "cheekProjection",
-        "chinHeight",
-        "chinProjection",
-        "chinWidth",
-        "columellarLobularAngle",
-        "columellarShow",
-        "dorsalHumpReduction",
-        "dorsalSeptalDeviation",
-        "jawDefinition",
-        "jawWidth",
-        "leftRightAsymmetry",
-        "lowerLipFullness",
-        "lowerLipProjection",
-        "nasalLength",
-        "nasofrontalAngle",
-        "nasolabialAngle",
-        "nostrilShape",
-        "nostrilSymmetry",
-        "radixHeight",
-        "supratipBreak",
-        "tipDefinition",
-        "tipHeight",
-        "tipProjection",
-        "tipRotation",
-        "upperLipFullness",
-        "upperLipProjection",
-      ].sort(),
-    );
+  it("exposes only the 17 geometry-backed controls", () => {
+    expect(Object.keys(PARAM_DESCRIPTORS).sort()).toEqual(SIMULATED_FIELDS);
+    expect([...SIMULATED_PARAM_KEYS].sort()).toEqual(SIMULATED_FIELDS);
+    expect(descriptors).toHaveLength(17);
   });
 
-  it("uses unique keys that match their registry entry", () => {
-    const keys = descriptors.map((d) => d.key);
-    expect(new Set(keys).size).toBe(keys.length);
-    for (const d of descriptors) {
-      expect(descriptorFor(d.key)).toBe(d);
+  it("keeps the clinical catalogue complete and internally consistent", () => {
+    expect(CLINICAL_PARAMETERS).toHaveLength(59);
+    expect(SIMULATED_CLINICAL_PARAMETERS).toHaveLength(17);
+    expect(REGISTERED_NOT_SIMULATED_PARAMETERS).toHaveLength(42);
+    expect(new Set(CLINICAL_PARAMETERS.map((p) => p.key)).size).toBe(
+      CLINICAL_PARAMETERS.length,
+    );
+
+    for (const parameter of SIMULATED_CLINICAL_PARAMETERS) {
+      expect(parameter.simulation.modelField).not.toBeNull();
+      expect(parameter.simulation.driver).toBeTruthy();
+      expect(parameter.reviewable).toBe(true);
+      expect(parameter.parser.status).toBe("supported");
+    }
+    for (const parameter of REGISTERED_NOT_SIMULATED_PARAMETERS) {
+      expect(parameter.simulation.modelField).toBeNull();
+      expect(parameter.simulation.driver).toBeNull();
+      expect(parameter.reviewable).toBe(true);
     }
   });
 
-  it("uses a valid unit for every parameter", () => {
+  it("links every simulated descriptor to exactly one clinical entry", () => {
+    const clinicalKeys = new Set<string>();
+    for (const d of descriptors) {
+      const clinical = clinicalParameterFor(d.clinicalKey);
+      expect(clinical).not.toBeNull();
+      expect(clinical?.simulation.status).toBe("simulated");
+      expect(clinical?.simulation.modelField).toBe(d.key);
+      expect(clinical?.parser.target).toBe(d.target);
+      expect(clinical?.parser.parameter).toBe(d.parameter);
+      expect(clinicalKeys.has(d.clinicalKey)).toBe(false);
+      clinicalKeys.add(d.clinicalKey);
+      expect(modelFieldForClinicalKey(d.clinicalKey)).toBe(d.key);
+    }
+  });
+
+  it("uses a valid unit for every simulated parameter", () => {
     for (const d of descriptors) {
       expect(["mm", "degrees"]).toContain(d.unit);
     }
@@ -72,39 +96,10 @@ describe("parameter registry", () => {
     for (const d of descriptors) {
       expect(Number.isFinite(d.min)).toBe(true);
       expect(Number.isFinite(d.max)).toBe(true);
-      // Some parameters (e.g., dorsalHumpReduction, alarBaseWidth) have min >= 0
-      if (d.min < 0) {
-        expect(d.min).toBeLessThan(0);
-      }
       expect(d.max).toBeGreaterThan(0);
       expect(d.step).toBeGreaterThan(0);
       expect(d.min).toBeLessThan(d.max);
       expect(defaults[d.key]).toBe(0);
-    }
-  });
-
-  it("maps every descriptor to a supported parser target/parameter pair", () => {
-    for (const d of descriptors) {
-      // Some descriptors map to existing model fields rather than having their own field
-      const expectedKey = (() => {
-        if (d.key === "dorsalHumpReduction") return "bridgeHeight";
-        if (d.key === "radixHeight") return "bridgeHeight";
-        if (d.key === "nasofrontalAngle") return "cheekProjection";
-        if (d.key === "nasolabialAngle") return "cheekProjection";
-        if (d.key === "columellarShow") return "cheekProjection";
-        if (d.key === "columellarLobularAngle") return "cheekProjection";
-        if (d.key === "supratipBreak") return "tipHeight";
-        if (d.key === "tipDefinition") return "tipHeight";
-        if (d.key === "alarFlare") return "alarWidth";
-        if (d.key === "alarBaseWidth") return "alarWidth";
-        if (d.key === "nostrilShape") return "alarWidth";
-        if (d.key === "nostrilSymmetry") return "alarWidth";
-        if (d.key === "dorsalSeptalDeviation") return "bridgeHeight";
-        if (d.key === "leftRightAsymmetry") return "jawDefinition";
-        if (d.key === "nasalLength") return "bridgeHeight";
-        return d.key;
-      })();
-      expect(paramKeyFor(d.target, d.parameter)).toBe(expectedKey);
     }
   });
 
@@ -127,20 +122,6 @@ describe("parameter registry", () => {
       "tipHeight",
       "tipRotation",
       "alarWidth",
-      "dorsalHumpReduction",
-      "radixHeight",
-      "nasofrontalAngle",
-      "nasolabialAngle",
-      "columellarShow",
-      "columellarLobularAngle",
-      "supratipBreak",
-      "tipDefinition",
-      "alarFlare",
-      "alarBaseWidth",
-      "nostrilShape",
-      "nostrilSymmetry",
-      "dorsalSeptalDeviation",
-      "nasalLength",
     ]);
     expect(descriptorsForGroup("cheeks").map((d) => d.key)).toEqual([
       "cheekProjection",
@@ -153,6 +134,45 @@ describe("parameter registry", () => {
       expect(SIMULATED_PARAM_KEYS).toContain(d.key);
       expect(d.manual).toBe(true);
     }
+  });
+
+  it("refuses to resolve descriptors without a geometry driver", () => {
+    expect(() => descriptorFor("alarFlare")).toThrow(/no verified geometry driver/);
+    expect(() => descriptorFor("dorsalHumpReduction")).toThrow(
+      /no verified geometry driver/,
+    );
+  });
+});
+
+describe("clinical concept resolution", () => {
+  it("maps a simulated concept to its model field", () => {
+    expect(modelFieldForClinicalKey("bridge_height")).toBe("bridgeHeight");
+    expect(modelFieldForClinicalKey("alar_width")).toBe("alarWidth");
+    expect(modelFieldForClinicalKey("jawline_definition")).toBe("jawDefinition");
+  });
+
+  it("never maps a registered-only concept to a model field", () => {
+    for (const key of [
+      "alar_flare",
+      "alar_base_width",
+      "dorsal_hump_reduction",
+      "tip_definition",
+      "nasolabial_angle",
+      "lip_asymmetry",
+      "facial_thirds",
+    ]) {
+      expect(clinicalParameterFor(key)).not.toBeNull();
+      expect(modelFieldForClinicalKey(key)).toBeNull();
+      expect(paramKeyForInstruction({ target: null, parameter: null, clinical_parameter: key })).toBeNull();
+    }
+  });
+
+  it("does not resolve genuinely ambiguous target/parameter pairs", () => {
+    expect(uniqueClinicalParameterForPair("nostril_region", "width")).toBeNull();
+    expect(uniqueClinicalParameterForPair("jawline", "definition")).toBeNull();
+    expect(uniqueClinicalParameterForPair("chin", "projection")?.key).toBe(
+      "chin_projection",
+    );
   });
 });
 
@@ -178,7 +198,45 @@ describe("paramKeyFor", () => {
     expect(paramKeyFor("nostril_region", "height")).toBeNull();
     expect(paramKeyFor("nostril_region", "rotation")).toBeNull();
     expect(paramKeyFor("nasal_bridge", "projection")).toBeNull();
+    expect(paramKeyFor("nasal_tip", "definition")).toBeNull();
+    expect(paramKeyFor("jawline", "rotation")).toBeNull();
     expect(paramKeyFor(null, "width")).toBeNull();
     expect(paramKeyFor("nasal_bridge", null)).toBeNull();
+  });
+});
+
+describe("paramKeyForInstruction", () => {
+  it("prefers the clinical key over a broad legacy pair", () => {
+    expect(
+      paramKeyForInstruction({
+        target: "nostril_region",
+        parameter: "width",
+        clinical_parameter: "alar_flare",
+      }),
+    ).toBeNull();
+    expect(
+      paramKeyForInstruction({
+        target: "nostril_region",
+        parameter: "width",
+        clinical_parameter: "alar_width",
+      }),
+    ).toBe("alarWidth");
+  });
+
+  it("falls back to the simulated pair only when no clinical key exists", () => {
+    expect(
+      paramKeyForInstruction({
+        target: "nostril_region",
+        parameter: "width",
+        clinical_parameter: null,
+      }),
+    ).toBe("alarWidth");
+    expect(
+      paramKeyForInstruction({
+        target: "nasal_tip",
+        parameter: "definition",
+        clinical_parameter: null,
+      }),
+    ).toBeNull();
   });
 });

@@ -24,14 +24,25 @@ router = APIRouter()
 
 
 async def _send(ws: WebSocket, payload: dict) -> None:
-    await ws.send_json(payload)
+    try:
+        await ws.send_json(payload)
+    except WebSocketDisconnect:
+        raise
+    except Exception as exc:
+        msg = str(exc).lower()
+        if "close message has been sent" in msg or "disconnected" in msg:
+            raise WebSocketDisconnect() from exc
+        raise
 
 
 async def _state(ws: WebSocket, state: str, detail: Optional[str] = None) -> None:
     payload = {"type": "state", "state": state}
     if detail:
         payload["detail"] = detail
-    await _send(ws, payload)
+    try:
+        await _send(ws, payload)
+    except Exception:
+        pass
 
 
 def _pcm16_to_float(data: bytes) -> np.ndarray:
@@ -170,7 +181,10 @@ class VoiceSession:
                 }
             )
         finally:
-            await _state(self.ws, self._rest_state())
+            try:
+                await _state(self.ws, self._rest_state())
+            except Exception:
+                self._closed = True
 
     async def _flush_segments(self, use_manual_fallback: bool = False) -> int:
         segments = self.segmenter.flush()
@@ -257,16 +271,35 @@ class VoiceSession:
 
 @router.websocket("/ws/voice")
 async def voice_websocket(ws: WebSocket) -> None:
-    await ws.accept()
+    try:
+        await ws.accept()
+    except Exception:
+        return
     session = VoiceSession(ws)
-    await _state(ws, "idle")
+    try:
+        await _state(ws, "idle")
+    except Exception:
+        session._closed = True
+        return
     try:
         while True:
-            message = await ws.receive()
-            if message["type"] == "websocket.disconnect":
+            try:
+                message = await ws.receive()
+            except WebSocketDisconnect:
+                break
+            if message.get("type") == "websocket.disconnect":
                 break
             if message.get("bytes") is not None:
-                await session.handle_audio(message["bytes"])
+                try:
+                    await session.handle_audio(message["bytes"])
+                except WebSocketDisconnect:
+                    break
+                except Exception:
+                    logger.exception("Voice audio handling failed")
+                    try:
+                        await session._safe_send({"type": "error", "message": "Audio processing failed"})
+                    except Exception:
+                        break
                 continue
             raw = message.get("text")
             if not raw:
@@ -274,12 +307,27 @@ async def voice_websocket(ws: WebSocket) -> None:
             try:
                 payload = json.loads(raw)
             except json.JSONDecodeError:
-                await _send(ws, {"type": "error", "message": "Control message must be JSON"})
+                try:
+                    await _send(ws, {"type": "error", "message": "Control message must be JSON"})
+                except WebSocketDisconnect:
+                    break
                 continue
             if not isinstance(payload, dict):
-                await _send(ws, {"type": "error", "message": "Control message must be an object"})
+                try:
+                    await _send(ws, {"type": "error", "message": "Control message must be an object"})
+                except WebSocketDisconnect:
+                    break
                 continue
-            await session.handle_control(payload)
+            try:
+                await session.handle_control(payload)
+            except WebSocketDisconnect:
+                break
+            except Exception:
+                logger.exception("Voice control handling failed")
+                try:
+                    await session._safe_send({"type": "error", "message": "Control handling failed"})
+                except WebSocketDisconnect:
+                    break
     except WebSocketDisconnect:
         pass
     except Exception as exc:  # pragma: no cover - transport dependent

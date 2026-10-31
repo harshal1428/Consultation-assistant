@@ -46,6 +46,36 @@ class ParserServicePolicyTests(unittest.TestCase):
         llm.assert_not_called()
         self.assertEqual(result.instructions[0].status, InstructionStatus.no_change)
 
+    def test_registered_only_concept_bypasses_llm_entirely(self):
+        with mock.patch.object(parser_service, "parse_with_llm") as llm:
+            result = parser_service.parse_command("Reduce the dorsal hump by 1 mm")
+        llm.assert_not_called()
+        self.assertEqual(
+            result.instructions[0].status, InstructionStatus.not_simulated
+        )
+        self.assertEqual(
+            result.instructions[0].clinical_parameter, "dorsal_hump_reduction"
+        )
+
+    def test_llm_cannot_substitute_a_simulated_pair_without_a_key(self):
+        raw = [
+            {
+                "target": "nostril_region",
+                "parameter": "width",
+                "clinical_parameter": "alar_flare",
+                "operation": "narrow",
+                "value": 1,
+                "unit": "mm",
+                "confidence": 0.9,
+                "original_text": "narrow the alar flare by 1 mm",
+            }
+        ]
+        with mock.patch.object(parser_service, "parse_with_llm", return_value=raw):
+            result = parser_service.parse_command("Narrow the alar flare by 1 mm")
+        self.assertEqual(
+            result.instructions[0].status, InstructionStatus.not_simulated
+        )
+
     def test_all_invalid_llm_output_falls_back_to_rules(self):
         raw = [{"target": "lips", "operation": "increase", "value": 2, "unit": "mm"}]
         with mock.patch.object(parser_service, "parse_with_llm", return_value=raw):

@@ -6,6 +6,7 @@ interface ChangeHistoryProps {
   history: Command[];
   onUndo: (index: number) => void;
   onSaveReport: () => void;
+  onSavePdf: () => void;
   onReset: () => void;
 }
 
@@ -13,6 +14,7 @@ export function ChangeHistory({
   history,
   onUndo,
   onSaveReport,
+  onSavePdf,
   onReset,
 }: ChangeHistoryProps) {
   return (
@@ -29,6 +31,15 @@ export function ChangeHistory({
           </p>
         </div>
         <div className="history__actions">
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            onClick={onSavePdf}
+            disabled={history.length === 0}
+          >
+            <Icon name="download" size={15} />
+            Save PDF
+          </button>
           <button
             type="button"
             className="btn btn--ghost btn--sm"

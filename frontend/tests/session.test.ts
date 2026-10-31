@@ -288,6 +288,31 @@ describe("comparison + report", () => {
     expect(report).toContain("illustrative scale");
   });
 
+  it("lists registered-only concepts as recognised but not applied", () => {
+    const command = makeCommand({
+      status: "not_simulated",
+      clinical_parameter: "dorsal_hump_reduction",
+      parameter: "height",
+      target: "nasal_bridge",
+      value: 1.5,
+      original_text: "reduce dorsal hump by 1.5 mm",
+      reason: "registered but not simulated",
+    });
+    const { session } = sessionWithProposal([command]);
+    const report = buildConsultationReport({
+      session,
+      history: [],
+      modelState: resetModel(),
+      now: 0,
+    });
+    expect(report).toContain("## Registered but not simulated");
+    expect(report).toContain("Dorsal hump reduction");
+    expect(report).toContain("not calibrated clinical millimetres");
+    expect(report).toContain("were **not applied**");
+    expect(report).not.toContain("## Confirmed parameter changes\n\n1.");
+    expect(deriveProposalStatus([command])).toBe("blocked");
+  });
+
   it("names the final selected scenario when one is chosen", () => {
     const result = createScenario(createSession(), {
       name: "Chosen",

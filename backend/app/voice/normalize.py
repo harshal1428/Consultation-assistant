@@ -62,6 +62,12 @@ FILLER_PATTERNS = [
     re.compile(r"\bkind of\b", re.I),
     re.compile(r"\bokay so\b", re.I),
     re.compile(r"\bjust a moment\b", re.I),
+    re.compile(r"\bhere we go\b", re.I),
+    re.compile(r"\bstep one\b", re.I),
+    re.compile(r"\bstatus\.?\s*nose\.?\s*pout\b", re.I),
+    re.compile(r"\bbop\b", re.I),
+    re.compile(r"\bradix\b", re.I),
+    re.compile(r"\bpout\b", re.I),
 ]
 
 _ONES = "zero|one|two|three|four|five|six|seven|eight|nine|oh"

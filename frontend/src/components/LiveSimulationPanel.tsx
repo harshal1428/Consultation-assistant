@@ -38,6 +38,8 @@ interface LiveSimulationPanelProps {
   onPttEnd?: () => void;
   onToggleMute?: () => void;
   devTools?: boolean;
+  autoApplyEnabled?: boolean;
+  onToggleAutoApply?: () => void;
 }
 
 const STATUS_LABEL: Record<LiveStatus, string> = {
@@ -96,6 +98,8 @@ export function LiveSimulationPanel({
   onPttEnd,
   onToggleMute,
   devTools = false,
+  autoApplyEnabled,
+  onToggleAutoApply,
 }: LiveSimulationPanelProps) {
   const [typed, setTyped] = useState("");
   const [exportNotice, setExportNotice] = useState("");
@@ -213,7 +217,17 @@ export function LiveSimulationPanel({
         {!supported ? (
           <span className="chip chip--warning">Voice unavailable — use the typed field below.</span>
         ) : null}
-        {voiceMode === "server" && !autoApply ? (
+        {onToggleAutoApply ? (
+          <label className="toggle" style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+            <input
+              type="checkbox"
+              checked={autoApplyEnabled ?? autoApply}
+              onChange={onToggleAutoApply}
+            />
+            <span>Auto-apply correct changes</span>
+          </label>
+        ) : null}
+        {(autoApplyEnabled ?? autoApply) === false ? (
           <span className="chip chip--warning">Voice opens for review before applying.</span>
         ) : null}
         {muted ? <span className="chip chip--muted">Microphone muted</span> : null}

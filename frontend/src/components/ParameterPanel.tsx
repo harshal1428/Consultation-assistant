@@ -105,6 +105,14 @@ export function ParameterPanel({
       <p className="panel__subtitle">
         Applied changes and manual adjustments
       </p>
+      <div className="panel__note" role="note">
+        <strong>Measurement status.</strong> Values are illustrative scene
+        units labelled “mm”, not calibrated clinical millimetres. Only the{" "}
+        {SIMULATED_PARAM_KEYS.length} geometry-backed controls above deform the
+        mesh. The wider clinical vocabulary (alar flare, dorsal hump, tip
+        definition, angles and facial ratios) is registered and reviewable but
+        is not simulated until a verified geometry driver exists.
+      </div>
     </section>
   );
 }

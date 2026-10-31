@@ -14,6 +14,7 @@ export function formatUnit(unit: string | null | undefined): string {
   if (unit === "mm" || unit === "millimeter" || unit === "millimeters")
     return "mm";
   if (unit === "cm") return "cm";
+  if (unit === "ratio") return "ratio";
   return unit;
 }
 
@@ -49,6 +50,10 @@ const STATUS_META: Record<InstructionStatus, StatusMeta> = {
   unsupported: { label: "Not supported", tone: "error" },
   invalid: { label: "Invalid", tone: "error" },
   no_change: { label: "No change", tone: "neutral" },
+  not_simulated: {
+    label: "Registered only · not simulated",
+    tone: "warning",
+  },
 };
 
 export function statusMeta(status: InstructionStatus): StatusMeta {

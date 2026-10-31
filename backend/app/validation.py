@@ -8,6 +8,7 @@ output obey exactly the same rules.
 
 from typing import Dict, Optional, Set
 
+from .clinical_registry import get_clinical_parameter
 from .schemas import (
     Instruction,
     InstructionStatus,
@@ -70,6 +71,21 @@ def canonical_unit_for(parameter: Optional[Parameter]) -> Optional[Unit]:
     return Unit.degrees if parameter in ANGLE_PARAMETERS else Unit.mm
 
 
+def canonical_unit_for_clinical(
+    clinical_key: Optional[str], parameter: Optional[Parameter]
+) -> Optional[Unit]:
+    clinical = get_clinical_parameter(clinical_key)
+    if clinical is None:
+        return canonical_unit_for(parameter)
+    if clinical.value_kind == "angle":
+        return Unit.degrees
+    if clinical.value_kind == "ratio":
+        return Unit.ratio
+    if clinical.value_kind == "categorical":
+        return None
+    return Unit.mm
+
+
 def _safe_enum(enum_cls, value):
     """Return (member, error_message). Never raises."""
     if value is None or value == "":
@@ -113,10 +129,34 @@ def build_instruction(
     instruction with an explicit reason instead of an invented command.
     """
 
+    clinical_key_raw = raw.get("clinical_parameter")
+    clinical_key = str(clinical_key_raw).strip() if clinical_key_raw else None
+    clinical = get_clinical_parameter(clinical_key)
+    if clinical_key and clinical is None:
+        return Instruction(
+            target=None,
+            parameter=None,
+            clinical_parameter=clinical_key,
+            operation=None,
+            value=None,
+            requested_value=None,
+            requested_unit=None,
+            unit=None,
+            direction=None,
+            adjusted_value=None,
+            confidence=0.0,
+            requires_confirmation=False,
+            status=InstructionStatus.invalid,
+            reason=f"Unknown clinical parameter key: '{clinical_key}'.",
+            original_text=original_text,
+            parser=parser,
+        )
+
     def invalid(reason: str, **overrides) -> Instruction:
         base = dict(
             target=None,
             parameter=None,
+            clinical_parameter=clinical_key,
             operation=None,
             value=None,
             requested_value=None,
@@ -174,7 +214,6 @@ def build_instruction(
         )
 
     # --- Region / parameter compatibility ---------------------------------
-    allowed = TARGET_PARAMETER_MAP.get(target, set())
     if parameter is None:
         return invalid(
             f"The '{target.value}' region needs an explicit parameter.",
@@ -182,11 +221,28 @@ def build_instruction(
             operation=operation,
             confidence=confidence,
         )
-    if parameter not in allowed:
+
+    # A known clinical key is authoritative. Reject a mismatched target/pair
+    # instead of silently applying a different concept.
+    if clinical is not None and (
+        target != clinical.parser_target or parameter != clinical.parser_parameter
+    ):
+        return invalid(
+            "The clinical parameter does not match its target/parameter mapping.",
+            target=target,
+            parameter=parameter,
+            clinical_parameter=clinical_key,
+            operation=operation,
+            confidence=confidence,
+        )
+
+    allowed = TARGET_PARAMETER_MAP.get(target, set())
+    if clinical is None and parameter not in allowed:
         allowed_labels = ", ".join(sorted(p.value for p in allowed))
         return Instruction(
             target=target,
             parameter=parameter,
+            clinical_parameter=None,
             operation=operation,
             value=None,
             requested_value=requested_value,
@@ -209,11 +265,12 @@ def build_instruction(
         return Instruction(
             target=target,
             parameter=parameter,
+            clinical_parameter=clinical_key,
             operation=None,
             value=None,
             requested_value=requested_value,
             requested_unit=requested_unit,
-            unit=canonical_unit_for(parameter),
+            unit=canonical_unit_for_clinical(clinical_key, parameter),
             direction=direction,
             adjusted_value=None,
             confidence=confidence,
@@ -224,7 +281,7 @@ def build_instruction(
             parser=parser,
         )
 
-    canonical_unit = canonical_unit_for(parameter)
+    canonical_unit = canonical_unit_for_clinical(clinical_key, parameter)
 
     # --- Unit normalization ------------------------------------------------
     if unit is None:
@@ -241,6 +298,7 @@ def build_instruction(
         return Instruction(
             target=target,
             parameter=parameter,
+            clinical_parameter=clinical_key,
             operation=operation,
             value=None,
             requested_value=requested_value,
@@ -259,6 +317,7 @@ def build_instruction(
         return Instruction(
             target=target,
             parameter=parameter,
+            clinical_parameter=clinical_key,
             operation=operation,
             value=None,
             requested_value=requested_value,
@@ -279,6 +338,7 @@ def build_instruction(
         return Instruction(
             target=target,
             parameter=parameter,
+            clinical_parameter=clinical_key,
             operation=operation,
             value=None,
             requested_value=requested_value,
@@ -298,6 +358,7 @@ def build_instruction(
         return Instruction(
             target=target,
             parameter=parameter,
+            clinical_parameter=clinical_key,
             operation=operation if operation else None,
             value=None,
             requested_value=requested_value,
@@ -316,6 +377,7 @@ def build_instruction(
         return Instruction(
             target=target,
             parameter=parameter,
+            clinical_parameter=clinical_key,
             operation=operation,
             value=0.0,
             requested_value=requested_value,
@@ -332,11 +394,15 @@ def build_instruction(
         )
 
     # --- Range guard (no silent clamping) ---------------------------------
-    limit = _limit_for(parameter)
+    # Registered-but-not-simulated concepts keep their own registry bounds and
+    # are returned as not_simulated below; applying the simulation delta limits
+    # to an absolute angle such as 130 degrees would be misleading.
+    limit = _limit_for(parameter) if clinical is None or clinical.simulated else None
     if limit is not None and value > limit:
         return Instruction(
             target=target,
             parameter=parameter,
+            clinical_parameter=clinical_key,
             operation=operation,
             value=value,
             requested_value=requested_value,
@@ -356,9 +422,34 @@ def build_instruction(
             parser=parser,
         )
 
+    if clinical is not None and not clinical.simulated:
+        return Instruction(
+            target=target,
+            parameter=parameter,
+            clinical_parameter=clinical_key,
+            operation=operation,
+            value=value,
+            requested_value=requested_value,
+            requested_unit=requested_unit or canonical_unit,
+            unit=canonical_unit,
+            direction=direction,
+            adjusted_value=None,
+            confidence=confidence,
+            requires_confirmation=False,
+            status=InstructionStatus.not_simulated,
+            reason=(
+                f"{clinical.clinical_name} is registered and reviewable, but this "
+                "prototype has no verified geometry driver for it. It was not "
+                f"applied. {clinical.limitations}"
+            ),
+            original_text=original_text,
+            parser=parser,
+        )
+
     return Instruction(
         target=target,
         parameter=parameter,
+        clinical_parameter=clinical_key,
         operation=operation,
         value=value,
         requested_value=requested_value,

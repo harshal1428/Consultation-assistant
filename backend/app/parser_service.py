@@ -60,7 +60,14 @@ def _rules_hard_negative(text: str, rules: List[Instruction]) -> bool:
     if NEGATION_PREFIX.search(text) or NEGATION_KEEP.search(text):
         return True
     return any(
-        i.status in (InstructionStatus.unsupported, InstructionStatus.no_change)
+        i.status
+        in (
+            InstructionStatus.unsupported,
+            InstructionStatus.no_change,
+            # A registered-only concept must not be handed to the language model
+            # where a similar simulated parameter could be substituted.
+            InstructionStatus.not_simulated,
+        )
         for i in rules
     )
 
